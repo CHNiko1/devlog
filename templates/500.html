@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}500 - შიდა სერვერის შეცდომა — DevLog{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <h1 class="display-1 mb-4">500</h1>
+            <h2 class="mb-4">⚠️ შიდა სერვერის შეცდომა</h2>
+            <p class="lead text-muted mb-4">
+                უკაცრავად რაღაც ხარვეზია, ჩვენი ტექნიკური გუნდი მუშაობს გასასწორებლად..
+            </p>
+            <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg">
+                მთავარი გვერდზე
+            </a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

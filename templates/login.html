@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}შესვლა — DevLog{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-lg">
+                <div class="card-body p-5">
+                    <h2 class="card-title text-center mb-4">🔓 შესვლა</h2>
+
+                    <form method="POST">
+                        <!-- Username -->
+                        <div class="mb-3">
+                            <label for="usernameInput" class="form-label">მომხმარებლის სახელი</label>
+                            <input 
+                                type="text" 
+                                class="form-control form-control-lg" 
+                                id="usernameInput" 
+                                name="username" 
+                                placeholder="შენი მომხმარებლის სახელი"
+                                required 
+                                autofocus>
+                        </div>
+
+                        <!-- Password -->
+                        <div class="mb-4">
+                            <label for="passwordInput" class="form-label">პაროლი</label>
+                            <input 
+                                type="password" 
+                                class="form-control form-control-lg" 
+                                id="passwordInput" 
+                                name="password" 
+                                placeholder="შენი პაროლი"
+                                required>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn btn-primary btn-lg w-100">შესვლა</button>
+                    </form>
+
+                    <!-- Divider -->
+                    <hr class="my-4">
+
+                    <!-- Register Link -->
+                    <p class="text-center mb-0">
+                        არ ხარ დარეგისტრირებული?
+                        <a href="{{ url_for('register') }}" class="fw-bold">დარეგისტრირდი აქ</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

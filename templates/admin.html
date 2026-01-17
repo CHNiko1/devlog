@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard — DevLog{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="alert alert-warning" role="alert">
+        <strong>⚙️ Admin Dashboard</strong>
+    </div>
+
+    <h1 class="mb-4">⏳ მოლოდინში მყოფი პოსტები</h1>
+
+    {% if pending_posts %}
+        <div class="row g-4">
+            {% for post in pending_posts %}
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ post.title }}</h5>
+                            <div class="mb-3">
+                                <span class="badge badge-language">{{ post.language }}</span>
+                                <span class="badge badge-level">
+                                    {% if post.level == 'beginner' %}🟢 სტაჟიორი / Trainee
+                                    {% elif post.level == 'junior' %}🔵 ჯუნიორი / Junior
+                                    {% elif post.level == 'intermediate' %}🟠 საშუალო / Mid-Level
+                                    {% else %}🔴 სენიორი / Senior 
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <p class="card-text text-muted small">
+                                {{ post.content[:150] }}{% if post.content|length > 150 %}...{% endif %}
+                            </p>
+                            <div class="small text-muted mb-3">
+                                <p class="mb-1"><strong>ავტორი:</strong> {{ post.author.username }}</p>
+                                <p class="mb-0"><strong>დაპოსტვა:</strong> {{ post.created_at.strftime('%d.%m.%Y %H:%M') if post.created_at else 'უცნობი' }}</p>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('approve_post', post_id=post.id) }}" class="btn btn-success btn-sm">
+                                    ✅ დადასტურება
+                                </a>
+                                <a href="{{ url_for('post_detail', post_id=post.id) }}" class="btn btn-outline-secondary btn-sm">
+                                    👁️ ნახვა
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-success text-center py-5" role="alert">
+            <h5>🎉 გილოცავ</h5>
+            <p class="mb-0">ყველა პოსტი განხილულია, შენი Dashboard თავისუფალია.</p>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}რეგისტრაცია — DevLog{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-lg">
+                <div class="card-body p-5">
+                    <h2 class="card-title text-center mb-4">👋 რეგისტრაცია</h2>
+                    <p class="text-center text-muted mb-4">მოგესალმებით ქართველი დეველოპერების ოჯახში!</p>
+
+                    <form method="POST">
+                        <!-- Username -->
+                        <div class="mb-3">
+                            <label for="usernameInput" class="form-label">მომხმარებლის სახელი</label>
+                            <input 
+                                type="text" 
+                                class="form-control form-control-lg" 
+                                id="usernameInput" 
+                                name="username" 
+                                placeholder="აირჩიე მომხმარებლის სახელი"
+                                required 
+                                autofocus>
+                            <small class="form-text text-muted">
+                                3-20 სიმბოლო, ასოები და ციფრი
+                            </small>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="mb-3">
+                            <label for="emailInput" class="form-label">ელ-ფოსტა</label>
+                            <input 
+                                type="email" 
+                                class="form-control form-control-lg" 
+                                id="emailInput" 
+                                name="email" 
+                                placeholder="შენი ელ-ფოსტის მისამართი"
+                                required>
+                        </div>
+
+                        <!-- Password -->
+                        <div class="mb-4">
+                            <label for="passwordInput" class="form-label">პაროლი</label>
+                            <input 
+                                type="password" 
+                                class="form-control form-control-lg" 
+                                id="passwordInput" 
+                                name="password" 
+                                placeholder="აირჩიე ძლიერი პაროლი"
+                                required>
+                            <small class="form-text text-muted">
+                                მინიმუმ 8 სიმბოლო
+                            </small>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">რეგისტრაცია</button>
+                    </form>
+
+                    <!-- Terms -->
+                    <p class="small text-center text-muted mb-0">
+                        რეგისტრაციის დაჭერით, თქვენ ეთანხმებით ჩვენს 
+                        <a href="#" class="text-decoration-none">პირობებს</a> და 
+                        <a href="#" class="text-decoration-none">კონფიდენციალობის პოლიტიკას</a>
+                    </p>
+
+                    <!-- Divider -->
+                    <hr class="my-4">
+
+                    <!-- Login Link -->
+                    <p class="text-center mb-0">
+                        უკვე გაქვთ ანგარიში? 
+                        <a href="{{ url_for('login') }}" class="fw-bold">შედი აქ</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

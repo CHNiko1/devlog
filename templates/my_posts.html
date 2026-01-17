@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}ჩემი პოსტები — DevLog{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="mb-4">📝 ჩემი პოსტები</h1>
+
+    {% if posts %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>სათაური</th>
+                        <th>💻 ენა</th>
+                        <th>📊 დონე</th>
+                        <th>📅 თარიღი</th>
+                        <th>✅ სტატუსი</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for post in posts %}
+                        <tr>
+                            <td>
+                                <strong>{{ post.title }}</strong>
+                            </td>
+                            <td>
+                                <span class="badge badge-language">{{ post.language }}</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-level">
+                                    {% if post.level == 'beginner' %}🟢 სტაჟიორი / Trainee
+                                    {% elif post.level == 'junior' %}🔵 ჯუნიორი / Junior
+                                    {% elif post.level == 'intermediate' %}🟠 საშუალო / Mid-Level
+                                    {% else %}🔴 სენიორი / Senior 
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <small>{{ post.created_at.strftime('%d.%m.%Y') if post.created_at else 'უცნობი' }}</small>
+                            </td>
+                            <td>
+                                {% if post.is_published %}
+                                    <span class="badge bg-success">✅ გამოქვეყნებული</span>
+                                {% else %}
+                                    <span class="badge bg-warning">⏳ მოლოდინში</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('post_detail', post_id=post.id) }}" class="btn btn-sm btn-outline-primary">
+                                    წაიკითხე
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info text-center py-5" role="alert">
+            <h5>📭 თქვენ ჯერ არ გამოგიქვეყნებიათ პოსტი</h5>
+            <p class="mb-3">დაიწყე დაპოსტვა DevLog-ზე კითხვით / დახმარებით.</p>
+            <a href="{{ url_for('create_post') }}" class="btn btn-primary btn-lg">
+                ✍️ პოსტის შექმნა
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}

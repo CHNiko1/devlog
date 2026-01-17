@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}პოსტები — DevLog{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="mb-4">პოსტები</h1>
+
+    <!-- Filter Section -->
+    <div class="filter-section mb-4">
+        <form method="GET" class="row g-3 align-items-end">
+            <!-- Search Input -->
+            <div class="col-md-4">
+                <label for="searchInput" class="form-label">🔍 ძებნა</label>
+                <input 
+                    type="text" 
+                    class="form-control" 
+                    id="searchInput" 
+                    name="q" 
+                    placeholder="პოსტის სათაური..." 
+                    value="{{ request.args.get('q', '') }}">
+            </div>
+
+            <!-- Language Filter -->
+            <div class="col-md-3">
+                <label for="languageFilter" class="form-label">💻 ენა</label>
+                <select class="form-select" id="languageFilter" name="language">
+                    <option value="">ყველა</option>
+                    <option value="Python" {% if request.args.get('language') == 'Python' %}selected{% endif %}>Python</option>
+                    <option value="JavaScript" {% if request.args.get('language') == 'JavaScript' %}selected{% endif %}>JavaScript</option>
+                    <option value="HTML" {% if request.args.get('language') == 'HTML' %}selected{% endif %}>HTML</option>
+                    <option value="CSS" {% if request.args.get('language') == 'CSS' %}selected{% endif %}>CSS</option>
+                    <option value="Bash" {% if request.args.get('language') == 'Bash' %}selected{% endif %}>Bash</option>
+                    <option value="C++" {% if request.args.get('language') == 'C++' %}selected{% endif %}>C++</option>
+                    <option value="Java" {% if request.args.get('language') == 'Java' %}selected{% endif %}>Java</option>
+                </select>
+            </div>
+
+            <!-- Level Filter -->
+            <div class="col-md-3">
+                <label for="levelFilter" class="form-label">📊 დონე</label>
+                <select class="form-select" id="levelFilter" name="level">
+                    <option value="">ყველა</option>
+                    <option value="beginner" {% if request.args.get('level') == 'beginner' %}selected{% endif %}>🟢 სტაჟიორი / Trainee</option>
+                    <option value="junior" {% if request.args.get('level') == 'junior' %}selected{% endif %}>🔵 ჯუნიორი / Junior</option>
+                    <option value="intermediate" {% if request.args.get('level') == 'intermediate' %}selected{% endif %}>🟠 საშუალო / Mid-Level</option>
+                    <option value="advanced" {% if request.args.get('level') == 'advanced' %}selected{% endif %}>🔴 სენიორი / Senior</option>
+                </select>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">ფილტრი</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Active Filters Display -->
+    {% if request.args.get('q') or request.args.get('language') or request.args.get('level') %}
+        <div class="alert alert-light border mb-4 d-flex justify-content-between align-items-center">
+            <div>
+                <strong>აქტიური ფილტრი:</strong>
+                {% if request.args.get('q') %}
+                    <span class="badge bg-primary">ძებნა: {{ request.args.get('q') }}</span>
+                {% endif %}
+                {% if request.args.get('language') %}
+                    <span class="badge bg-info">💻 {{ request.args.get('language') }}</span>
+                {% endif %}
+                {% if request.args.get('level') %}
+                    <span class="badge bg-warning">📊 
+                        {% if request.args.get('level') == 'beginner' %}სტაჟიორი / Trainee
+                        {% elif request.args.get('level') == 'junior' %}ჯუნიორი / Junior
+                        {% elif request.args.get('level') == 'intermediate' %}საშუალო / Mid-Level
+                        {% else %}სენიორი / Senior
+                        {% endif %}
+                    </span>
+                {% endif %}
+            </div>
+            <a href="{{ url_for('posts') }}" class="btn btn-sm btn-outline-danger">✕ ფილტრის გასუფთავება</a>
+        </div>
+    {% endif %}
+
+    <!-- Posts Grid -->
+    {% if posts %}
+        <div class="row g-4">
+            {% for post in posts %}
+                <div class="col-md-6 col-lg-12">
+                    <div class="card post-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0">
+                                    <a href="{{ url_for('post_detail', post_id=post.id) }}" class="text-decoration-none">{{ post.title }}</a>
+                                </h5>
+                                {% if not post.is_published %}
+                                    <span class="badge bg-warning">⏳ მოლოდინშია</span>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <span class="badge badge-language">{{ post.language }}</span>
+                                <span class="badge badge-level">
+                                    {% if post.level == 'beginner' %}🟢 სტაჟიორი / Trainee
+                                    {% elif post.level == 'junior' %}🔵 ჯუნიორი / Junior
+                                    {% elif post.level == 'intermediate' %}🟠 საშუალო / Mid-Level
+                                    {% else %}🔴 სენიორი / Senior
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <p class="card-text text-muted">
+                                {{ post.content[:150] }}{% if post.content|length > 150 %}...{% endif %}
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center gap-2">
+                                <small class="text-muted">
+                                    👤 <strong>{{ post.author.username }}</strong> | 
+                                    📅 {{ post.created_at.strftime('%d.%m.%Y') if post.created_at else 'უცნობი' }}
+                                </small>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <!-- Like Button -->
+                                    {% if current_user.is_authenticated %}
+                                        {% set user_liked = post.likes|selectattr('author_id', 'equalto', current_user.id)|list|length > 0 %}
+                                        <form method="POST" action="{{ url_for('like_post', post_id=post.id) }}" style="display: inline;">
+                                            <button type="submit" class="btn btn-sm {% if user_liked %}btn-danger{% else %}btn-outline-danger{% endif %}" title="Like">
+                                                {% if user_liked %}❤️{% else %}🤍{% endif %}
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline-danger" title="Liked">🤍</a>
+                                    {% endif %}
+                                    <small>{{ post.likes|length }}</small>
+
+                                    <!-- Repost Button -->
+                                    {% if current_user.is_authenticated %}
+                                        {% set user_reposted = post.reposts|selectattr('author_id', 'equalto', current_user.id)|list|length > 0 %}
+                                        <form method="POST" action="{{ url_for('repost_post', post_id=post.id) }}" style="display: inline;">
+                                            <button type="submit" class="btn btn-sm {% if user_reposted %}btn-info{% else %}btn-outline-info{% endif %}" title="Repost">
+                                                {% if user_reposted %}🔄{% else %}↗️{% endif %}
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline-info" title="Reposted">↗️</a>
+                                    {% endif %}
+                                    <small>{{ post.reposts|length }}</small>
+
+                                    <a href="{{ url_for('post_detail', post_id=post.id) }}" class="btn btn-sm btn-outline-primary">წაიკითხე →</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info text-center" role="alert">
+            <h5>🔍 პოსტები ვერ მოიძებნა</h5>
+            <p>სცადე სხვა პროგრამირების ენა ან სხვა დონე, თუ არ არის პოსტი დაელოდე სიახლეებს.</p>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}

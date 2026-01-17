@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}{{ user.username }} - DevLog{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- User Profile Header -->
+    <div class="card mb-5">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <!-- Profile Photo -->
+                <div class="col-md-3 text-center mb-3 mb-md-0 position-relative">
+                    <img src="{{ user.profile_photo }}" alt="{{ user.username }}" class="rounded-circle" width="150" height="150" style="object-fit: cover; border: 3px solid #667eea;">
+                    
+                    <!-- Photo Upload for Own Profile -->
+                    {% if current_user.is_authenticated and current_user.id == user.id %}
+                        <form method="POST" action="{{ url_for('upload_photo') }}" enctype="multipart/form-data" class="mt-3">
+                            <input type="file" name="photo" class="form-control form-control-sm" accept="image/*" id="photoInput" style="display: none;">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="document.getElementById('photoInput').click()">
+                                📷 ფოტო შეცვლა
+                            </button>
+                            <script>
+                                document.getElementById('photoInput').addEventListener('change', function(e) {
+                                    if (this.files.length > 0) {
+                                        this.form.submit();
+                                    }
+                                });
+                            </script>
+                        </form>
+                    {% endif %}
+                </div>
+                
+                <!-- User Info -->
+                <div class="col-md-9">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h1 class="mb-2">{{ user.username }}</h1>
+                            <p class="text-muted mb-3">📧 {{ user.email }}</p>
+                        </div>
+                        
+                        <!-- Follow/Unfollow Button -->
+                        {% if current_user.is_authenticated and current_user.id != user.id %}
+                            {% if is_following %}
+                                <form method="POST" action="{{ url_for('unfollow_user', username=user.username) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm">✓ Unfollow</button>
+                                </form>
+                            {% else %}
+                                <form method="POST" action="{{ url_for('follow_user', username=user.username) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-primary btn-sm">+ Follow</button>
+                                </form>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Bio -->
+                    <div class="bio-section mb-3">
+                        {% if current_user.is_authenticated and current_user.id == user.id %}
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#editBioForm" aria-expanded="false" aria-controls="editBioForm">
+                                ✏️ ბიოგრაფიის რედაქტირება
+                            </button>
+                            
+                            <div class="collapse mt-2" id="editBioForm">
+                                <form method="POST" action="{{ url_for('update_bio') }}" class="card card-body">
+                                    <textarea name="bio" class="form-control mb-2" rows="3" placeholder="დაწერე შენი ბიო..." maxlength="500">{{ user.bio }}</textarea>
+                                    <small class="text-muted d-block mb-2">მაქსიმუმ 500 სიმბოლო</small>
+                                    <button type="submit" class="btn btn-primary btn-sm">შენახვა</button>
+                                </form>
+                            </div>
+                        {% endif %}
+                        
+                        {% if user.bio %}
+                            <p class="lead mb-3 mt-3">{{ user.bio }}</p>
+                        {% else %}
+                            <p class="text-muted mb-3 mt-3">bio does not exist / ბიო არ არსებობს.</p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Stats -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-auto">
+                            <div class="text-center">
+                                <h5 class="mb-0">{{ posts|length }}</h5>
+                                <small class="text-muted">Post</small>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="text-center">
+                                <h5 class="mb-0">{{ reposts|length }}</h5>
+                                <small class="text-muted">Repost</small>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="text-center">
+                                <h5 class="mb-0">{{ user.followers|length }}</h5>
+                                <small class="text-muted">Followers</small>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="text-center">
+                                <h5 class="mb-0">{{ user.following|length }}</h5>
+                                <small class="text-muted">Following</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Member Since -->
+                    <small class="text-muted">📅 გაწევრიანებული: {{ user.created_at.strftime('%d.%m.%Y') }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs for Posts and Reposts -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="posts-tab" data-bs-toggle="tab" data-bs-target="#posts-content" type="button" role="tab" aria-controls="posts-content" aria-selected="true">
+                📝 {{ posts|length }} პოსტი
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="reposts-tab" data-bs-toggle="tab" data-bs-target="#reposts-content" type="button" role="tab" aria-controls="reposts-content" aria-selected="false">
+                🔄 {{ reposts|length }} რეპოსტი
+            </button>
+        </li>
+    </ul>    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Posts Tab -->
+        <div class="tab-pane fade show active" id="posts-content" role="tabpanel" aria-labelledby="posts-tab">
+            {% if posts %}
+                <div class="row g-4">
+                    {% for post in posts %}
+                        <div class="col-12">
+                            <div class="card post-card">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="card-title mb-0">
+                                            <a href="{{ url_for('post_detail', post_id=post.id) }}" class="text-decoration-none">{{ post.title }}</a>
+                                        </h5>
+                                        {% if not post.is_published %}
+                                            <span class="badge bg-warning">⏳ მოლოდინშია</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="mb-3">
+                                        <span class="badge badge-language">{{ post.language }}</span>
+                                        <span class="badge badge-level">
+                                            {% if post.level == 'beginner' %}🟢 სტაჟიორი / Trainee
+                                            {% elif post.level == 'junior' %}🔵 ჯუნიორი / Junior
+                                            {% elif post.level == 'intermediate' %}🟠 საშუალო / Mid-Level
+                                            {% else %}🔴 სენიორი / Senior
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <p class="card-text text-muted">
+                                        {{ post.content[:200] }}{% if post.content|length > 200 %}...{% endif %}
+                                    </p>
+                                    <div class="d-flex justify-content-between align-items-center small text-muted">
+                                        <span>📅 {{ post.created_at.strftime('%d.%m.%Y') }}</span>
+                                        <a href="{{ url_for('post_detail', post_id=post.id) }}" class="btn btn-sm btn-outline-primary">წაკითხვა</a>
+                                        {% if current_user.is_authenticated and (current_user.id == post.author_id or current_user.role == 'admin') %}
+                                        <form method="POST" action="{{ url_for('delete_post', post_id=post.id) }}" style="display:inline;" onsubmit="return confirm('დარწმუნებული ხარ რომ გინდა პოსტის წაშლა?');">
+                                            <button type="submit" class="btn btn-sm btn-danger ms-2">🗑️ წაშლა</button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info" role="alert">
+                    <strong>🚀 პოსტი ჯერ არ აქვს შექმნილი</strong>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Reposts Tab -->
+        <div class="tab-pane fade" id="reposts-content" role="tabpanel" aria-labelledby="reposts-tab">
+            {% if reposts %}
+                <div class="row g-4">
+                    {% for post in reposts %}
+                        <div class="col-12">
+                            <div class="card post-card">
+                                <div class="card-header bg-light">
+                                    <small class="text-muted">🔄 {{ user.username }}-ის მიერ რეპოსტი</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="card-title mb-0">
+                                            <a href="{{ url_for('post_detail', post_id=post.id) }}" class="text-decoration-none">{{ post.title }}</a>
+                                        </h5>
+                                    </div>
+                                    <div class="mb-3">
+                                        <span class="badge badge-language">{{ post.language }}</span>
+                                        <span class="badge badge-level">
+                                            {% if post.level == 'beginner' %}🟢 სტაჟიორი / Trainee
+                                            {% elif post.level == 'junior' %}🔵 ჯუნიორი / Junior
+                                            {% elif post.level == 'intermediate' %}🟠 საშუალო / Mid-Level
+                                            {% else %}🔴 სენიორი / Senior
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <p class="card-text text-muted mb-2">
+                                        {{ post.content[:200] }}{% if post.content|length > 200 %}...{% endif %}
+                                    </p>
+                                    <small class="text-muted d-block mb-3">👤 ავტორი: <a href="{{ url_for('user_profile', username=post.author.username) }}" class="text-decoration-none">{{ post.author.username }}</a></small>
+                                    <div class="d-flex justify-content-between align-items-center small text-muted">
+                                        <span>📅 {{ post.created_at.strftime('%d.%m.%Y') }}</span>
+                                        <a href="{{ url_for('post_detail', post_id=post.id) }}" class="btn btn-sm btn-outline-primary">წაკითხვა</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info" role="alert">
+                    <strong>🚀 რეპოსტი ჯერ არ აქვს</strong>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

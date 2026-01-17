@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}პოსტის შექმნა — DevLog{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <h1 class="mb-4">✍️ ახალი პოსტის შექმნა</h1>
+
+            <form method="POST" class="needs-validation" enctype="multipart/form-data">
+                <!-- Title Input -->
+                <div class="mb-3">
+                    <label for="titleInput" class="form-label">სათაური *</label>
+                    <input 
+                        type="text" 
+                        class="form-control" 
+                        id="titleInput" 
+                        name="title" 
+                        placeholder="მაგ: Python-ში ციკლების სწავლება"
+                        required>
+                    <small class="form-text text-muted">
+                        დაეხმარე ან დაიხმარე, ეს პლატფორმა ამისთვისაა.
+                    </small>
+                </div>
+
+                <!-- Language Select -->
+                <div class="mb-3">
+                    <label for="languageSelect" class="form-label">💻 პროგრამირების ენა *</label>
+                    <select class="form-select" id="languageSelect" name="language" required>
+                        <option value="">აირჩიე ენა...</option>
+                        <option value="Python">Python</option>
+                        <option value="JavaScript">JavaScript</option>
+                        <option value="HTML">HTML</option>
+                        <option value="CSS">CSS</option>
+                        <option value="Bash">Bash</option>
+                        <option value="C++">C++</option>
+                        <option value="Java">Java</option>
+                    </select>
+                </div>
+
+                <!-- Level Select -->
+                <div class="mb-3">
+                    <label for="levelSelect" class="form-label">📊 სირთულის დონე *</label>
+                    <select class="form-select" id="levelSelect" name="level" required>
+                        <option value="">აირჩიე დონე...</option>
+                        <option value="beginner">🟢 სტაჟიორი / Trainee (სრულიად დამწყები)</option>
+                        <option value="junior">🔵 ჯუნიორი / Junior (0-2 წლის გამოცდილი დეველოპერი)</option>
+                        <option value="intermediate">🟠  საშუალო / Mid-Level (საშუალო დონის პროგრამისტი)</option>
+                        <option value="advanced">🔴 სენიორი / Senior (5+ წელი გამოცდილებიანი დეველოპერი)</option>
+                    </select>
+                    <small class="form-text text-muted">
+                        აირჩიე დონე თუ ვისთვისაა შენი პოსტი განკუთვნილი!
+                    </small>
+                </div>
+
+                <!-- Content Textarea -->
+                <div class="mb-3">
+                    <label for="contentInput" class="form-label">კონტენტი *</label>
+                    <textarea 
+                        class="form-control" 
+                        id="contentInput" 
+                        name="content" 
+                        rows="10" 
+                        placeholder="დაეხმარე დეველოპერს ან დაიხმარე ის, დაწერე პოსტი"
+                        required></textarea>
+                    <small class="form-text text-muted">
+                        💡 რჩევა: არ მოგერიდოს კითხვის დასმა, დეველოპერები მზად არიან დასახმარებლად!
+                    </small>
+                </div>
+
+                <!-- Photo Upload -->
+                <div class="mb-3">
+                    <label for="photoInput" class="form-label">📸 ფოტო (ოპციონალური)</label>
+                    <input 
+                        type="file" 
+                        class="form-control" 
+                        id="photoInput" 
+                        name="photo"
+                        accept="image/*">
+                    <small class="form-text text-muted">
+                        დამატებითი ფოტო თქვენი პოსტისთვის. მხარდაჭერილი ფორმატები: JPG, PNG, GIF
+                    </small>
+                </div>
+
+                <!-- AI Simplify Checkbox -->
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input 
+                            class="form-check-input" 
+                            type="checkbox" 
+                            id="aiSimplifyCheck" 
+                            name="ai_simplify">
+                        <label class="form-check-label" for="aiSimplifyCheck">
+                            🤖 AI-მ გამიმარტივოს (დამწყებებისთვის)
+                        </label>
+                    </div>
+                   
+                </div>
+
+                <!-- Info Alert -->
+                <div class="alert alert-info" role="alert">
+                    <strong>📌 გაითვალისწინე:</strong>
+                    <p class="small mb-0">
+                        თქვენი პოსტი დადების შემდეგ გადაეწოდება ადმინისტრატორს რომელიც ამოწმებს მას, 
+                        ეს გვეხმარება რათა შევაჩეროთ spam, და გადავამოწმოთ პოსტის 100% სიზუსტე.
+                        და მხოლოდ ამის შემდეგ იტვირთება პოსტი რომლის ნახვაც ხალხს შეუძლია.
+                    </p>
+                </div>
+
+                <!-- Buttons -->
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">✍️ დაპოსტვა</button>
+                    <a href="{{ url_for('posts') }}" class="btn btn-outline-secondary btn-lg">უკან</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} — DevLog{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-md-8">
+            <!-- Post Header -->
+            <article class="mb-4">
+                <header class="mb-4">
+                    <h1 class="display-4 mb-3">{{ post.title }}</h1>
+                    <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+                        <span class="badge badge-language">{{ post.language }}</span>
+                        <span class="badge badge-level">
+                            {% if post.level == 'beginner' %}🟢 სტაჟიორი / Trainee
+                            {% elif post.level == 'junior' %}🔵 ჯუნიორი / Junior
+                            {% elif post.level == 'intermediate' %}🟠 საშუალო / Mid-Level
+                            {% else %}🔴 სენიორი / Senior 
+                            {% endif %}
+                        </span>
+                        {% if not post.is_published %}
+                            <span class="badge bg-warning">⏳ დაელოდეთ ადმინისტრატორს რათა დაადასტუროს თქვენი პოსტი</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted small">
+                        <p class="mb-0">
+                            <a href="{{ url_for('user_profile', username=post.author.username) }}" class="text-decoration-none text-muted"><strong>👤 {{ post.author.username }}</strong></a> | 
+                            <span title="{{ post.created_at.strftime('%d.%m.%Y %H:%M') if post.created_at else 'უცნობი' }}">
+                                📅 {{ post.created_at.strftime('%d.%m.%Y') if post.created_at else 'უცნობი' }}
+                            </span>
+                        </p>
+                    </div>
+                </header>
+
+                <!-- Post Content -->
+                <section class="post-content">
+                    {{ post.content }}
+                </section>
+
+                <!-- Delete Post Button (Author or Admin) -->
+                {% if current_user.is_authenticated and (current_user.id == post.author_id or current_user.role == 'admin') %}
+                <form method="POST" action="{{ url_for('delete_post', post_id=post.id) }}" onsubmit="return confirm('დარწმუნებული ხარ რომ გინდა პოსტის წაშლა?');" class="mt-4">
+                    <button type="submit" class="btn btn-danger">🗑️ პოსტის წაშლა</button>
+                </form>
+                {% endif %}
+
+                <!-- Like and Repost Actions -->
+                <div class="post-actions mt-4 mb-4">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <!-- Like Button -->
+                        {% if current_user.is_authenticated %}
+                            {% set user_liked = post.likes|selectattr('author_id', 'equalto', current_user.id)|list|length > 0 %}
+                            <form method="POST" action="{{ url_for('like_post', post_id=post.id) }}" style="display: inline;">
+                                <button type="submit" class="btn {% if user_liked %}btn-danger{% else %}btn-outline-danger{% endif %} btn-sm">
+                                    {% if user_liked %}❤️ მოწონებული{% else %}🤍 მოწონება{% endif %}
+                                </button>
+                            </form>
+                        {% else %}
+                            <a href="{{ url_for('login') }}" class="btn btn-outline-danger btn-sm">🤍 მოწონება</a>
+                        {% endif %}
+                        <span class="badge bg-light text-dark align-self-center">{{ post.likes|length }}</span>
+
+                        <!-- Repost Button -->
+                        {% if current_user.is_authenticated %}
+                            {% set user_reposted = post.reposts|selectattr('author_id', 'equalto', current_user.id)|list|length > 0 %}
+                            <form method="POST" action="{{ url_for('repost_post', post_id=post.id) }}" style="display: inline;">
+                                <button type="submit" class="btn {% if user_reposted %}btn-info{% else %}btn-outline-info{% endif %} btn-sm">
+                                    {% if user_reposted %}🔄 დარეპოსტებულია{% else %}🔄 რეპოსტი{% endif %}
+                                </button>
+                            </form>
+                        {% else %}
+                            <a href="{{ url_for('login') }}" class="btn btn-outline-info btn-sm">🔄 რეპოსტი</a>
+                        {% endif %}
+                        <span class="badge bg-light text-dark align-self-center">{{ post.reposts|length }}</span>
+                    </div>
+                </div>
+            </article>
+
+            <hr class="my-5">
+
+            <!-- Comments Section -->
+            <section class="comments-section">
+                <h3 class="mb-4">
+                    💬 კომენტარები
+                    {% if post.comments %}
+                        <span class="badge bg-secondary">{{ post.comments|length }}</span>
+                    {% endif %}
+                </h3>
+
+                <!-- Comments List -->
+                {% if post.comments %}
+                    <div class="comments-list mb-4">
+                        {% for comment in post.comments %}
+                            <div class="comment-card mb-3">
+                                <div class="comment-header d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <a href="{{ url_for('user_profile', username=comment.author.username) }}" class="text-decoration-none"><strong>👤 {{ comment.author.username }}</strong></a>
+                                    </div>
+                                    <small class="text-muted">📅 {{ comment.created_at.strftime('%d.%m.%Y %H:%M') if comment.created_at else 'უცნობი' }}</small>
+                                </div>
+                                <p class="comment-text mt-2 mb-0">{{ comment.content }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-light border mb-4">
+                        <p class="mb-0">👻 ამ პოსტს ჯერ არ აქვს კომენტარი, იყავი პირველი</p>
+                    </div>
+                {% endif %}
+
+                <!-- Add Comment Form -->
+                {% if current_user.is_authenticated %}
+                    <div class="add-comment-section mt-4 pt-4 border-top">
+                        <h5 class="mb-3">კომენტარის დამატება</h5>
+                        <form method="POST" action="{{ url_for('add_comment', post_id=post.id) }}">
+                            <div class="mb-3">
+                                <label for="commentContent" class="form-label">შენი კომენტარი</label>
+                                <textarea 
+                                    class="form-control" 
+                                    id="commentContent" 
+                                    name="content" 
+                                    rows="3" 
+                                    placeholder="დაწერე შენი აზრი..."
+                                    required></textarea>
+                                <small class="text-muted">იყავი ზრდილობიანი</small>
+                            </div>
+                            <button type="submit" class="btn btn-primary">კომენტარის დამატება</button>
+                        </form>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info" role="alert">
+                        <p class="mb-0">
+                            კომენტარის დასამატებლად 
+                            <a href="{{ url_for('login') }}" class="alert-link">შედი ანგარიშში</a> ან 
+                            <a href="{{ url_for('register') }}" class="alert-link">დარეგისტრირდი</a>
+                        </p>
+                    </div>
+                {% endif %}
+            </section>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- AI Helper Card -->
+            <div class="card ai-helper-card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">🤖 AI დამხმარე</h5>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-3">
+                        გინდა რომ ეს პოსტი გაამარტივო Junior Developerebისთვის?
+                    </p>
+                    <div class="form-check mb-3">
+                        <input 
+                            class="form-check-input" 
+                            type="checkbox" 
+                            id="aiSimplify" 
+                            name="ai_simplify">
+                        <label class="form-check-label" for="aiSimplify">
+                            AI-მ გამიმარტივოს
+                        </label>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="handleAISimplify()">
+                        ✨ გამარტივება
+                    </button>
+                    <small class="text-muted d-block mt-2">
+                        ეს ფუნქცია ჯერ ექსპერიმენტალურია.
+                    </small>
+                </div>
+            </div>
+
+            <!-- Post Info Card -->
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">📋 პოსტის ინფო</h5>
+                </div>
+                <div class="card-body">
+                    <p class="small"><strong>ენა:</strong> {{ post.language }}</p>
+                    <p class="small"><strong>დონე:</strong> 
+                        {% if post.level == 'beginner' %}🟢 სტაჟიორი / Trainee
+                        {% elif post.level == 'junior' %}🔵 ჯუნიორი / Junior
+                        {% elif post.level == 'intermediate' %}🟠 საშუალო / Mid-Level
+                        {% else %}🔴 სენიორი / Senior
+                        {% endif %}
+                    </p>
+                    <p class="small"><strong>ავტორი:</strong> {{ post.author.username }}</p>
+                    <p class="small"><strong>დაპოსტება:</strong> {{ post.created_at.strftime('%d.%m.%Y') if post.created_at else 'უცნობი' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function handleAISimplify() {
+    const checkbox = document.getElementById('aiSimplify');
+    if (checkbox.checked) {
+        alert('AI გამარტივება მალე იქნება ხელმისაწვდომი! 🚀');
+        // TODO: Backend integration for AI simplification
+    }
+}
+</script>
+
+{% endblock %}
