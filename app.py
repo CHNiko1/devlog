@@ -62,11 +62,11 @@ setup_routes(app)
 def init_database(app):
     with app.app_context():
         db.create_all()
-        
+
         # Check if users already exist
         if User.query.first() is not None:
             return
-        
+
         # Create demo user
         demo = User(
             username='demo',
@@ -75,7 +75,7 @@ def init_database(app):
             role='user',
             level='beginner'
         )
-        
+
         # Create admin user
         admin = User(
             username='admin',
@@ -84,17 +84,21 @@ def init_database(app):
             role='admin',
             level='senior'
         )
-        
+
         db.session.add(demo)
         db.session.add(admin)
         db.session.commit()
 
 
+# Ensure database exists when the app loads (covers gunicorn)
+init_database(app)
+
+
 # Run the app
 if __name__ == '__main__':
-    init_database(app)
+    port = int(os.environ.get('PORT', 5000))
     print("\nDevLog started")
     print("Demo user: demo / password123")
     print("Admin user: admin / admin123")
-    print("\nhttp://localhost:5000/\n")
-    app.run(debug=True)
+    print(f"\nhttp://localhost:{port}/\n")
+    app.run(host='0.0.0.0', port=port, debug=True)
