@@ -6,8 +6,19 @@ import os
 from datetime import datetime
 from flask import render_template, request, redirect, url_for, flash, session
 from werkzeug.utils import secure_filename
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from models import db, User, Post, Comment, Like, Repost, Notification, Message
+
+
+# Allowed file extensions
+ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+
+
+def allowed_file(filename):
+    """Check if file extension is allowed"""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def setup_routes(app):
@@ -26,22 +37,27 @@ def setup_routes(app):
             flash('You need to be logged in', 'warning')
             return redirect(url_for('login'))
         
-        post = Post.query.get(post_id)
-        if post is None:
-            return "Post not found", 404
+        try:
+            post = Post.query.get(post_id)
+            if post is None:
+                return "Post not found", 404
 
-        # Check if user is author or admin
-        if post.author_id != user.id and user.role != 'admin':
-            flash('You cannot delete this post', 'danger')
+            # Check if user is author or admin
+            if post.author_id != user.id and user.role != 'admin':
+                flash('You cannot delete this post', 'danger')
+                return redirect(url_for('post_detail', post_id=post_id))
+
+            db.session.delete(post)
+            db.session.commit()
+            flash('Post deleted', 'success')
+
+            if user.role == 'admin':
+                return redirect(url_for('admin'))
+            return redirect(url_for('user_profile', username=user.username))
+        except Exception as e:
+            db.session.rollback()
+            flash('Error deleting post', 'danger')
             return redirect(url_for('post_detail', post_id=post_id))
-
-        db.session.delete(post)
-        db.session.commit()
-        flash('Post deleted', 'success')
-
-        if user.role == 'admin':
-            return redirect(url_for('admin'))
-        return redirect(url_for('user_profile', username=user.username))
 
     # Home page
     @app.route('/')
@@ -58,36 +74,43 @@ def setup_routes(app):
     @app.route('/posts')
     def posts():
         """All posts page with search and filters"""
-        q = request.args.get('q', '')
-        language = request.args.get('language', '')
-        level = request.args.get('level', '')
-        
-        # Get all posts that are published
-        posts_list = Post.query.filter_by(is_published=True).all()
-        
-        # Filter by search if there's a query
-        if q:
-            search_term = f'%{q}%'
-            posts_list = [p for p in posts_list if q.lower() in p.title.lower() or q.lower() in p.content.lower()]
-        
-        # Filter by language
-        if language:
-            posts_list = [p for p in posts_list if p.language == language]
-        
-        # Filter by level
-        if level:
-            posts_list = [p for p in posts_list if p.level == level]
-        
-        # Sort by newest first
-        posts_list = sorted(posts_list, key=lambda p: p.created_at, reverse=True)
-        
-        # Save active filters
-        active_filters = {}
-        active_filters['q'] = q
-        active_filters['language'] = language
-        active_filters['level'] = level
-        
-        return render_template('posts.html', posts=posts_list, filters=active_filters)
+        try:
+            q = request.args.get('q', '')
+            language = request.args.get('language', '')
+            level = request.args.get('level', '')
+            
+            # Get all posts that are published
+            posts_list = Post.query.filter_by(is_published=True)
+            
+            # Filter by search using SQL LIKE
+            if q:
+                posts_list = posts_list.filter(
+                    (Post.title.ilike(f'%{q}%')) | 
+                    (Post.content.ilike(f'%{q}%'))
+                )
+            
+            # Filter by language
+            if language:
+                posts_list = posts_list.filter_by(language=language)
+            
+            # Filter by level
+            if level:
+                posts_list = posts_list.filter_by(level=level)
+            
+            # Sort by newest first
+            posts_list = posts_list.order_by(Post.created_at.desc()).all()
+            
+            # Save active filters
+            active_filters = {
+                'q': q,
+                'language': language,
+                'level': level
+            }
+            
+            return render_template('posts.html', posts=posts_list, filters=active_filters)
+        except Exception as e:
+            flash('Error loading posts', 'danger')
+            return redirect(url_for('index'))
     
     
     # Clear filters
@@ -116,43 +139,60 @@ def setup_routes(app):
             flash('Please log in first', 'warning')
             return redirect(url_for('login'))
         if request.method == 'POST':
-            title = request.form.get('title')
-            content = request.form.get('content')
-            language = request.form.get('language')
-            level = request.form.get('level')
+            title = request.form.get('title', '').strip()
+            content = request.form.get('content', '').strip()
+            language = request.form.get('language', '')
+            level = request.form.get('level', '')
             
-            # Handle photo upload
-            photo_filename = None
-            if 'photo' in request.files:
-                photo = request.files['photo']
-                if photo and photo.filename != '':
-                    # Create posts directory if it doesn't exist
-                    posts_dir = os.path.join('static', 'uploads', 'posts')
-                    os.makedirs(posts_dir, exist_ok=True)
-                    
-                    # Save file with secure filename
-                    filename = secure_filename(photo.filename)
-                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
-                    filename = timestamp + filename
-                    photo.save(os.path.join(posts_dir, filename))
-                    photo_filename = filename
+            if not title or not content:
+                flash('Title and content are required', 'danger')
+                return render_template('create_post.html')
             
-            # Create new post
-            new_post = Post(
-                title=title,
-                content=content,
-                author=get_current_user(),
-                language=language,
-                level=level,
-                photo=photo_filename,
-                is_published=False  # Admin needs to approve
-            )
-            
-            db.session.add(new_post)
-            db.session.commit()
-            
-            flash('პოსტი დაიპოსტა, ადმინდა დაადასტურა', 'success')
-            return redirect(url_for('my_posts'))
+            try:
+                # Handle photo upload
+                photo_filename = None
+                if 'photo' in request.files:
+                    photo = request.files['photo']
+                    if photo and photo.filename != '' and allowed_file(photo.filename):
+                        # Check file size
+                        photo.seek(0, os.SEEK_END)
+                        file_length = photo.tell()
+                        photo.seek(0)
+                        if file_length > MAX_FILE_SIZE:
+                            flash('Image too large (max 5MB)', 'danger')
+                            return render_template('create_post.html')
+                        
+                        # Create posts directory if it doesn't exist
+                        posts_dir = os.path.join('static', 'uploads', 'posts')
+                        os.makedirs(posts_dir, exist_ok=True)
+                        
+                        # Save file with secure filename
+                        filename = secure_filename(photo.filename)
+                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+                        filename = timestamp + filename
+                        photo.save(os.path.join(posts_dir, filename))
+                        photo_filename = filename
+                
+                # Create new post
+                new_post = Post(
+                    title=title,
+                    content=content,
+                    author=get_current_user(),
+                    language=language,
+                    level=level,
+                    photo=photo_filename,
+                    is_published=False  # Admin needs to approve
+                )
+                
+                db.session.add(new_post)
+                db.session.commit()
+                
+                flash('პოსტი დაიპოსტა, ადმინდა დაადასტურა', 'success')
+                return redirect(url_for('my_posts'))
+            except Exception as e:
+                db.session.rollback()
+                flash('Error creating post', 'danger')
+                return render_template('create_post.html')
         
         return render_template('create_post.html')
     
@@ -228,12 +268,16 @@ def setup_routes(app):
     def login():
         """Login page"""
         if request.method == 'POST':
-            username = request.form.get('username')
-            password = request.form.get('password')
+            username = request.form.get('username', '').strip()
+            password = request.form.get('password', '')
+            
+            if not username or not password:
+                flash('Username and password required', 'danger')
+                return redirect(url_for('login'))
             
             user = User.query.filter_by(username=username).first()
             
-            if user and user.password == password:
+            if user and check_password_hash(user.password, password):
                 session['user_id'] = user.id
                 flash('Login successful!', 'success')
                 return redirect(url_for('index'))
@@ -248,11 +292,16 @@ def setup_routes(app):
     def register():
         """Register page"""
         if request.method == 'POST':
-            username = request.form.get('username')
-            email = request.form.get('email')
-            password = request.form.get('password')
-            level = request.form.get('level')
-            gender = request.form.get('gender')
+            username = request.form.get('username', '').strip()
+            email = request.form.get('email', '').strip()
+            password = request.form.get('password', '')
+            level = request.form.get('level', 'beginner')
+            gender = request.form.get('gender', 'other')
+            
+            # Validate inputs
+            if not username or not email or not password:
+                flash('All fields are required', 'danger')
+                return redirect(url_for('register'))
             
             # Check password length
             if len(password) < 8:
@@ -279,21 +328,26 @@ def setup_routes(app):
             else:
                 avatar = '/static/images/avatar-default.png'
             
-            # Create user
-            new_user = User(
-                username=username,
-                email=email,
-                password=password,
-                level=level if level else 'beginner',
-                gender=gender,
-                profile_photo=avatar
-            )
-            
-            db.session.add(new_user)
-            db.session.commit()
-            
-            flash('Registration successful!', 'success')
-            return redirect(url_for('login'))
+            try:
+                # Create user with hashed password
+                new_user = User(
+                    username=username,
+                    email=email,
+                    password=generate_password_hash(password),
+                    level=level,
+                    gender=gender,
+                    profile_photo=avatar
+                )
+                
+                db.session.add(new_user)
+                db.session.commit()
+                
+                flash('Registration successful! Please log in.', 'success')
+                return redirect(url_for('login'))
+            except Exception as e:
+                db.session.rollback()
+                flash('Error during registration', 'danger')
+                return redirect(url_for('register'))
         
         return render_template('register.html')
     
@@ -303,22 +357,25 @@ def setup_routes(app):
     def forgot_password():
         """Forgot password page - send reset link via email (simulated)"""
         if request.method == 'POST':
-            email = request.form.get('email')
+            email = request.form.get('email', '').strip()
             user = User.query.filter_by(email=email).first()
             
             # Security: Always show same message whether email exists or not
             flash('თუ ეს ელ. მისამართი რეგისტრირებულია, პაროლის აღდგენის ბმული გამოგეგზავნებათ.', 'info')
             
             if user:
-                # Generate secure token and store in session
-                import secrets
-                reset_token = secrets.token_urlsafe(32)
-                session[f'reset_token_{user.id}'] = reset_token
-                session.permanent = True
-                
-                # In production, send email with reset link
-                # For demo, redirect directly
-                return redirect(url_for('reset_with_token', token=reset_token))
+                try:
+                    # Generate secure token
+                    import secrets
+                    reset_token = secrets.token_urlsafe(32)
+                    session[f'reset_token_{user.id}'] = reset_token
+                    session.permanent = True
+                    
+                    # In production, send email with reset link
+                    # For demo, redirect directly
+                    return redirect(url_for('reset_with_token', token=reset_token))
+                except Exception as e:
+                    flash('Error processing request', 'danger')
             
             return redirect(url_for('login'))
         
@@ -329,45 +386,53 @@ def setup_routes(app):
     @app.route('/reset-password/<token>', methods=['GET', 'POST'])
     def reset_with_token(token):
         """Reset password using token from forgot password"""
-        # Find user with this token
-        user_id = None
-        for key in session.keys():
-            if key.startswith('reset_token_') and session[key] == token:
-                user_id = int(key.split('_')[2])
-                break
-        
-        if not user_id:
-            flash('ამ ბმულის ვადა გასულია ან ის არასწორია.', 'danger')
+        try:
+            # Find user with this token
+            user_id = None
+            for key in session.keys():
+                if key.startswith('reset_token_') and session[key] == token:
+                    user_id = int(key.split('_')[2])
+                    break
+            
+            if not user_id:
+                flash('ამ ბმულის ვადა გასულია ან ის არასწორია.', 'danger')
+                return redirect(url_for('login'))
+            
+            user = User.query.get(user_id)
+            if not user:
+                flash('მომხმარებელი ვერ მოიძებნა.', 'danger')
+                return redirect(url_for('login'))
+            
+            if request.method == 'POST':
+                new_password = request.form.get('new_password', '')
+                confirm_password = request.form.get('confirm_password', '')
+                
+                if not new_password or not confirm_password:
+                    flash('ყველა ველი აუცილებელია.', 'danger')
+                    return redirect(url_for('reset_with_token', token=token))
+                
+                if new_password != confirm_password:
+                    flash('პაროლი არ ემთხვევა.', 'danger')
+                    return redirect(url_for('reset_with_token', token=token))
+                
+                if len(new_password) < 8:
+                    flash('Password must be at least 8 characters', 'danger')
+                    return redirect(url_for('reset_with_token', token=token))
+                
+                # Update password
+                user.password = generate_password_hash(new_password)
+                db.session.commit()
+                
+                # Clear the reset token
+                session.pop(f'reset_token_{user_id}', None)
+                
+                flash('პაროლი წარმატებით აღდგა! გთხოვთ შედით ახალი პაროლით.', 'success')
+                return redirect(url_for('login'))
+            
+            return render_template('reset_with_token.html', token=token)
+        except Exception as e:
+            flash('Error processing reset', 'danger')
             return redirect(url_for('login'))
-        
-        user = User.query.get(user_id)
-        if not user:
-            flash('მომხმარებელი ვერ მოიძებნა.', 'danger')
-            return redirect(url_for('login'))
-        
-        if request.method == 'POST':
-            new_password = request.form.get('new_password')
-            confirm_password = request.form.get('confirm_password')
-            
-            if not new_password or not confirm_password:
-                flash('ყველა ველი აუცილებელია.', 'danger')
-                return redirect(url_for('reset_with_token', token=token))
-            
-            if new_password != confirm_password:
-                flash('პაროლი არ ემთხვევა.', 'danger')
-                return redirect(url_for('reset_with_token', token=token))
-            
-            # Update password
-            user.password = new_password
-            db.session.commit()
-            
-            # Clear the reset token
-            session.pop(f'reset_token_{user_id}', None)
-            
-            flash('პაროლი წარმატებით აღდგა! გთხოვთ შედით ახალი პაროლით.', 'success')
-            return redirect(url_for('login'))
-        
-        return render_template('reset_with_token.html', token=token)
     
     
     # Change password
@@ -380,13 +445,22 @@ def setup_routes(app):
             return redirect(url_for('login'))
         if request.method == 'POST':
             current_user = get_current_user()
-            old_password = request.form.get('old_password')
-            new_password = request.form.get('new_password')
-            confirm_password = request.form.get('confirm_password')
+            old_password = request.form.get('old_password', '')
+            new_password = request.form.get('new_password', '')
+            confirm_password = request.form.get('confirm_password', '')
+            
+            if not old_password or not new_password or not confirm_password:
+                flash('All fields are required', 'danger')
+                return redirect(url_for('reset_password'))
             
             # Verify old password
-            if current_user.password != old_password:
+            if not check_password_hash(current_user.password, old_password):
                 flash('ძველი პაროლი არასწორია.', 'danger')
+                return redirect(url_for('reset_password'))
+            
+            # Check password length
+            if len(new_password) < 8:
+                flash('New password must be at least 8 characters', 'danger')
                 return redirect(url_for('reset_password'))
             
             # Check if passwords match
@@ -395,7 +469,7 @@ def setup_routes(app):
                 return redirect(url_for('reset_password'))
             
             # Update password
-            current_user.password = new_password
+            current_user.password = generate_password_hash(new_password)
             db.session.commit()
             flash('პაროლი წარმატებით შეიცვალა!', 'success')
             return redirect(url_for('user_profile', username=current_user.username))
@@ -410,35 +484,40 @@ def setup_routes(app):
         if user is None:
             flash('Please log in first', 'warning')
             return redirect(url_for('login'))
-        post = Post.query.get(post_id)
-        if post is None:
-            return "Post not found", 404
         
-        # Check if user already liked this post
-        already_liked = Like.query.filter_by(post_id=post_id, author_id=user.id).first()
-        
-        if already_liked:
-            # If already liked, remove the like (unlike)
-            db.session.delete(already_liked)
-            db.session.commit()
-            flash('პოსტზე მოწონება გააუქმეთ!', 'info')
-        else:
-            # If not liked, add a like
-            new_like = Like(
-                post_id=post_id,
-                author_id=user.id
-            )
-            db.session.add(new_like)
-            if post.author_id != user.id:
-                db.session.add(Notification(
-                    user_id=post.author_id,
-                    sender_id=user.id,
-                    post_id=post.id,
-                    action='like',
-                    message=f'{user.username}-მა მოიწონა თქვენი პოსტი: "{post.title}"'
-                ))
-            db.session.commit()
-            flash('პოსტი მოწონებულია!', 'success')
+        try:
+            post = Post.query.get(post_id)
+            if post is None:
+                return "Post not found", 404
+            
+            # Check if user already liked this post
+            already_liked = Like.query.filter_by(post_id=post_id, author_id=user.id).first()
+            
+            if already_liked:
+                # If already liked, remove the like (unlike)
+                db.session.delete(already_liked)
+                db.session.commit()
+                flash('პოსტზე მოწონება გააუქმეთ!', 'info')
+            else:
+                # If not liked, add a like
+                new_like = Like(
+                    post_id=post_id,
+                    author_id=user.id
+                )
+                db.session.add(new_like)
+                if post.author_id != user.id:
+                    db.session.add(Notification(
+                        user_id=post.author_id,
+                        sender_id=user.id,
+                        post_id=post.id,
+                        action='like',
+                        message=f'{user.username}-მა მოიწონა თქვენი პოსტი: "{post.title}"'
+                    ))
+                db.session.commit()
+                flash('პოსტი მოწონებულია!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash('Error liking post', 'danger')
         
         return redirect(url_for('post_detail', post_id=post_id))
     
@@ -451,35 +530,40 @@ def setup_routes(app):
         if user is None:
             flash('Please log in first', 'warning')
             return redirect(url_for('login'))
-        post = Post.query.get(post_id)
-        if post is None:
-            return "Post not found", 404
         
-        # Check if user already reposted this post
-        already_reposted = Repost.query.filter_by(post_id=post_id, author_id=user.id).first()
-        
-        if already_reposted:
-            # If already reposted, remove the repost
-            db.session.delete(already_reposted)
-            db.session.commit()
-            flash('რეპოსტი წაშლილია.', 'info')
-        else:
-            # If not reposted, add a repost
-            new_repost = Repost(
-                post_id=post_id,
-                author_id=user.id
-            )
-            db.session.add(new_repost)
-            if post.author_id != user.id:
-                db.session.add(Notification(
-                    user_id=post.author_id,
-                    sender_id=user.id,
-                    post_id=post.id,
-                    action='repost',
-                    message=f'{user.username}-მა გააზიარა თქვენი პოსტი: "{post.title}"'
-                ))
-            db.session.commit()
-            flash('თქვენ დაარეპოსტეთ პოსტი!', 'success')
+        try:
+            post = Post.query.get(post_id)
+            if post is None:
+                return "Post not found", 404
+            
+            # Check if user already reposted this post
+            already_reposted = Repost.query.filter_by(post_id=post_id, author_id=user.id).first()
+            
+            if already_reposted:
+                # If already reposted, remove the repost
+                db.session.delete(already_reposted)
+                db.session.commit()
+                flash('რეპოსტი წაშლილია.', 'info')
+            else:
+                # If not reposted, add a repost
+                new_repost = Repost(
+                    post_id=post_id,
+                    author_id=user.id
+                )
+                db.session.add(new_repost)
+                if post.author_id != user.id:
+                    db.session.add(Notification(
+                        user_id=post.author_id,
+                        sender_id=user.id,
+                        post_id=post.id,
+                        action='repost',
+                        message=f'{user.username}-მა გააზიარა თქვენი პოსტი: "{post.title}"'
+                    ))
+                db.session.commit()
+                flash('თქვენ დაარეპოსტეთ პოსტი!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash('Error reposting', 'danger')
         
         return redirect(url_for('post_detail', post_id=post_id))
     
@@ -581,26 +665,37 @@ def setup_routes(app):
             flash('ფოტო არ არის არჩეული.', 'danger')
             return redirect(url_for('user_profile', username=user.username))
         
-        if file:
-            # Save file to static/uploads directory
-            import os
-            from werkzeug.utils import secure_filename
+        if file and allowed_file(file.filename):
+            # Check file size
+            file.seek(0, os.SEEK_END)
+            file_length = file.tell()
+            file.seek(0)
+            if file_length > MAX_FILE_SIZE:
+                flash('File too large (max 5MB)', 'danger')
+                return redirect(url_for('user_profile', username=user.username))
             
-            upload_dir = os.path.join('static', 'uploads', 'profiles')
-            os.makedirs(upload_dir, exist_ok=True)
-            
-            # Generate unique filename
-            filename = secure_filename(f"{user.id}_{file.filename}")
-            filepath = os.path.join(upload_dir, filename)
-            
-            # Save file
-            file.save(filepath)
-            
-            # Update user's profile_photo
-            user.profile_photo = f'/{filepath.replace(chr(92), "/")}'
-            db.session.commit()
-            
-            flash('ფოტო განახლებულია!', 'success')
+            try:
+                # Save file to static/uploads directory
+                upload_dir = os.path.join('static', 'uploads', 'profiles')
+                os.makedirs(upload_dir, exist_ok=True)
+                
+                # Generate unique filename
+                filename = secure_filename(f"{user.id}_{file.filename}")
+                filepath = os.path.join(upload_dir, filename)
+                
+                # Save file
+                file.save(filepath)
+                
+                # Update user's profile_photo
+                user.profile_photo = f'/{filepath.replace(chr(92), "/")}'
+                db.session.commit()
+                
+                flash('ფოტო განახლებულია!', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash('Error uploading photo', 'danger')
+        else:
+            flash('Invalid file type. Allowed: jpg, jpeg, png, gif', 'danger')
         
         return redirect(url_for('user_profile', username=user.username))
     

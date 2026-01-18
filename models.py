@@ -66,10 +66,10 @@ class Post(db.Model):
     
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     
-    comments = db.relationship('Comment', backref='post')
-    likes = db.relationship('Like', backref='post')
-    reposts = db.relationship('Repost', backref='post')
-    notifications = db.relationship('Notification', backref='post')
+    comments = db.relationship('Comment', backref='post', cascade='all, delete-orphan')
+    likes = db.relationship('Like', backref='post', cascade='all, delete-orphan')
+    reposts = db.relationship('Repost', backref='post', cascade='all, delete-orphan')
+    notifications = db.relationship('Notification', backref='post', cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'Post({self.title})'

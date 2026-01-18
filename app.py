@@ -5,7 +5,13 @@ A social platform for Georgian developers
 
 from flask import Flask, session, redirect, url_for, flash, render_template
 from models import db, User, Notification
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Settings
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -17,6 +23,9 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = SECRET_KEY
+app.config['SESSION_PERMANENT'] = False
+app.config['PERMANENT_SESSION_LIFETIME'] = 3600
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Initialize database
 db.init_app(app)
@@ -58,6 +67,21 @@ from routes import setup_routes
 setup_routes(app)
 
 
+# Error handlers
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors"""
+    return render_template('404.html'), 404
+
+
+@app.errorhandler(500)
+def server_error(error):
+    """Handle 500 errors"""
+    logger.error(f'Server error: {error}')
+    db.session.rollback()
+    return render_template('500.html'), 500
+
+
 # Initialize database on startup
 def init_database(app):
     with app.app_context():
@@ -71,7 +95,7 @@ def init_database(app):
         demo = User(
             username='demo',
             email='demo@devlog.ge',
-            password='password123',
+            password=generate_password_hash('password123'),
             role='user',
             level='beginner'
         )
@@ -80,7 +104,7 @@ def init_database(app):
         admin = User(
             username='admin',
             email='admin@devlog.ge',
-            password='admin123',
+            password=generate_password_hash('admin123'),
             role='admin',
             level='senior'
         )
