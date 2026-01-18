@@ -18,9 +18,18 @@
                         {% endif %}
                         {% if n.action == 'follow' and n.sender %}
                             <div class="mt-2">
-                                <form method="POST" action="{{ url_for('follow_back', username=n.sender.username) }}" style="display: inline;">
-                                    <button type="submit" class="btn btn-sm btn-primary">⤴️ Follow Back</button>
-                                </form>
+                                {% if n.sender in current_user.following %}
+                                    <form method="POST" action="{{ url_for('message_thread', username=n.sender.username) }}" style="display: inline;">
+                                        <a href="{{ url_for('message_thread', username=n.sender.username) }}" class="btn btn-sm btn-primary">✉️ შეტყობინება</a>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('unfollow_user', username=n.sender.username) }}" style="display: inline;">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">✕ Unfollow</button>
+                                    </form>
+                                {% else %}
+                                    <form method="POST" action="{{ url_for('follow_back', username=n.sender.username) }}" style="display: inline;">
+                                        <button type="submit" class="btn btn-sm btn-primary">⤴️ Follow Back</button>
+                                    </form>
+                                {% endif %}
                                 <a href="{{ url_for('user_profile', username=n.sender.username) }}" class="btn btn-sm btn-outline-secondary">პროფილი</a>
                             </div>
                         {% endif %}
