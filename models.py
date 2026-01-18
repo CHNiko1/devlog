@@ -1,6 +1,5 @@
 """
-Database Models for DevLog
-Uses SQLAlchemy to define database tables
+Database models
 """
 
 from flask_sqlalchemy import SQLAlchemy
@@ -9,126 +8,131 @@ from datetime import datetime
 db = SQLAlchemy()
 
 
-# Follow association table for many-to-many relationship
-follow_association = db.Table(
-    'follow_association',
-    db.Column('follower_id', db.Integer, db.ForeignKey('users.id'), primary_key=True),
-    db.Column('followed_id', db.Integer, db.ForeignKey('users.id'), primary_key=True)
+# Follow table
+follow_table = db.Table(
+    'follow_table',
+    db.Column('follower_id', db.Integer, db.ForeignKey('users.id')),
+    db.Column('followed_id', db.Integer, db.ForeignKey('users.id'))
 )
 
 
 class User(db.Model):
-    """User model - stores user information"""
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False, index=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), default='user')  # 'user' or 'admin'
-    profile_photo = db.Column(db.String(255), default='/static/img/default-avatar.png')  # Profile photo URL
-    bio = db.Column(db.Text, default='')  # User bio/description
+    username = db.Column(db.String(80), unique=True)
+    email = db.Column(db.String(120), unique=True)
+    password = db.Column(db.String(255))
+    role = db.Column(db.String(20), default='user')
+    level = db.Column(db.String(50), default='beginner')
+    gender = db.Column(db.String(20), default='other')
+    profile_photo = db.Column(db.String(255), default='/static/images/avatar-default.png')
+    bio = db.Column(db.Text, default='')
     created_at = db.Column(db.DateTime, default=datetime.now)
     
-    # Relationships
-    posts = db.relationship('Post', backref='author', lazy=True, cascade='all, delete-orphan')
-    comments = db.relationship('Comment', backref='author', lazy=True, cascade='all, delete-orphan')
-    likes = db.relationship('Like', backref='author', lazy=True, cascade='all, delete-orphan')
-    reposts = db.relationship('Repost', backref='author', lazy=True, cascade='all, delete-orphan')
+    posts = db.relationship('Post', backref='author')
+    comments = db.relationship('Comment', backref='author')
+    likes = db.relationship('Like', backref='author')
+    reposts = db.relationship('Repost', backref='author')
+    notifications = db.relationship('Notification', backref='recipient', foreign_keys='Notification.user_id')
+    sent_notifications = db.relationship('Notification', backref='sender', foreign_keys='Notification.sender_id')
+    messages_sent = db.relationship('Message', backref='sender', foreign_keys='Message.sender_id')
+    messages_received = db.relationship('Message', backref='receiver', foreign_keys='Message.receiver_id')
     
-    # Follow relationships
     following = db.relationship(
         'User',
-        secondary=follow_association,
-        primaryjoin=follow_association.c.follower_id == id,
-        secondaryjoin=follow_association.c.followed_id == id,
-        backref='followers',
-        lazy=True
+        secondary=follow_table,
+        primaryjoin=follow_table.c.follower_id == id,
+        secondaryjoin=follow_table.c.followed_id == id,
+        backref='followers'
     )
     
-    # Flask-Login required properties
-    is_authenticated = True
-    is_active = True
-    is_anonymous = False
-    
-    def get_id(self):
-        return str(self.id)
-    
     def __repr__(self):
-        return f'<User {self.username}>'
+        return f'User({self.username})'
 
 
 class Post(db.Model):
-    """Post model - stores blog posts"""
     __tablename__ = 'posts'
     
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(200), nullable=False)
-    content = db.Column(db.Text, nullable=False)
-    language = db.Column(db.String(50), nullable=False)  # Python, JavaScript, etc.
-    level = db.Column(db.String(50), nullable=False)  # beginner, junior, intermediate, advanced
-    photo = db.Column(db.String(255))  # Photo filename for posts
-    is_published = db.Column(db.Boolean, default=False)  # Admin approval needed
+    title = db.Column(db.String(200))
+    content = db.Column(db.Text)
+    language = db.Column(db.String(50))
+    level = db.Column(db.String(50))
+    photo = db.Column(db.String(255))
+    is_published = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
-    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now)
     
-    # Foreign key
-    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     
-    # Relationships
-    comments = db.relationship('Comment', backref='post', lazy=True, cascade='all, delete-orphan')
-    likes = db.relationship('Like', backref='post', lazy=True, cascade='all, delete-orphan')
-    reposts = db.relationship('Repost', backref='post', lazy=True, cascade='all, delete-orphan')
+    comments = db.relationship('Comment', backref='post')
+    likes = db.relationship('Like', backref='post')
+    reposts = db.relationship('Repost', backref='post')
+    notifications = db.relationship('Notification', backref='post')
     
     def __repr__(self):
-        return f'<Post {self.title}>'
+        return f'Post({self.title})'
 
 
 class Like(db.Model):
-    """Like model - when users like a post"""
     __tablename__ = 'likes'
     
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     
-    # Foreign keys
-    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
-    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    
-    # Make sure each user can only like a post once
-    __table_args__ = (db.UniqueConstraint('post_id', 'author_id', name='unique_post_like'),)
-    
-    def __repr__(self):
-        return f'<Like by user {self.author_id} on post {self.post_id}>'
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
 
 class Repost(db.Model):
-    """Repost model - when users share a post"""
     __tablename__ = 'reposts'
     
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     
-    # Foreign keys
-    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
-    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    
-    # Make sure each user can only repost a post once
-    __table_args__ = (db.UniqueConstraint('post_id', 'author_id', name='unique_post_repost'),)
-    
-    def __repr__(self):
-        return f'<Repost by user {self.author_id} on post {self.post_id}>'
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+
 class Comment(db.Model):
-    """Comment model - stores comments on posts"""
     __tablename__ = 'comments'
     
     id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.Text, nullable=False)
+    content = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
     
-    # Foreign keys
-    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
-    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     
     def __repr__(self):
-        return f'<Comment by {self.author.username}>'
+        return f'Comment({self.content[:20]})'
+
+
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    action = db.Column(db.String(50))
+    message = db.Column(db.Text)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+
+
+class Message(db.Model):
+    __tablename__ = 'messages'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    receiver_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    
+    def __repr__(self):
+        return f'Message({self.content[:20]})'

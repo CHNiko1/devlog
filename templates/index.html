@@ -12,22 +12,82 @@
             <p class="fs-5 text-muted mb-4">ქართველი Developer-ების სამეზობლო</p>
             <div class="d-flex gap-3 justify-content-center">
                 <a href="{{ url_for('posts') }}" class="btn btn-primary btn-lg fw-bold">პოსტების ნახვა</a>
-                <a href="{% if current_user.is_authenticated %}{{ url_for('create_post') }}{% else %}{{ url_for('login') }}{% endif %}" class="btn btn-outline-primary btn-lg fw-bold">📝 შექმენი პოსტი</a>
+                {% if current_user %}
+                    <a href="{{ url_for('create_post') }}" class="btn btn-outline-primary btn-lg fw-bold">📝 შექმენი პოსტი</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg fw-bold">📝 შექმენი პოსტი</a>
+                {% endif %}
             </div>
         </div>
     </div>
 </section>
 
-<!-- Featured Posts -->
+<!-- Programmers Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <h2 class="section-title text-center mb-5">👨‍💻 ჩვენი დეველოპერები</h2>
+        
+        <div class="row g-4 text-center">
+            <div class="col-md-6 col-lg-3">
+                <div class="card h-100 shadow-soft">
+                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop" class="card-img-top" alt="Davit Aghmashenebeli" style="height: 250px; object-fit: cover;">
+                    <div class="card-body">
+                        <h5 class="card-title">ნუგზარ ავალიანი</h5>
+                        <p class="card-text text-muted">Frontend Developer</p>
+                        <small class="text-muted">React, Vue.js, JavaScript</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card h-100 shadow-soft">
+                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop" class="card-img-top" alt="Eka Beselia" style="height: 250px; object-fit: cover;">
+                    <div class="card-body">
+                        <h5 class="card-title">ეკა ბესელია</h5>
+                        <p class="card-text text-muted">Backend Developer</p>
+                        <small class="text-muted">Python, Flask, Django</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card h-100 shadow-soft">
+                    <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop" class="card-img-top" alt="Nugzar Echekmadze" style="height: 250px; object-fit: cover;">
+                    <div class="card-body">
+                        <h5 class="card-title">დავით აღმაშენებელი</h5>
+                        <p class="card-text text-muted">Full Stack Developer</p>
+                        <small class="text-muted">Web, Mobile, Desktop</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card h-100 shadow-soft">
+                    <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop" class="card-img-top" alt="Tamo Varshalomidze" style="height: 250px; object-fit: cover;">
+                    <div class="card-body">
+                        <h5 class="card-title">თამო ვარშალომიძე</h5>
+                        <p class="card-text text-muted">DevOps Engineer</p>
+                        <small class="text-muted">Docker, Kubernetes, Cloud</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Posts Section -->
 <section class="py-5 bg-white">
     <div class="container">
-        <h2 class="section-title text-center mb-8" style="margin-top: -1rem;">მოახლოვებული პოსტები</h2>
+        <h2 class="section-title text-center mb-5">მოახლოვებული პოსტები</h2>
         
         {% if posts %}
             <div class="row g-4">
                 {% for post in posts[:6] %}
                     <div class="col-md-6 col-lg-4">
                         <div class="card h-100 post-card">
+                            {% if post.photo %}
+                            <img src="{{ url_for('static', filename='uploads/posts/' + post.photo) }}" class="card-img-top" alt="{{ post.title }}" style="max-height: 200px; object-fit: cover;">
+                            {% endif %}
                             <div class="card-body d-flex flex-column">
                                 <h5 class="card-title">{{ post.title }}</h5>
                                 <div class="mb-3">
@@ -49,11 +109,10 @@
                                 </div>
                                 <div class="d-flex gap-2 mt-3 align-items-center">
                                     <!-- Like Button -->
-                                    {% if current_user.is_authenticated %}
-                                        {% set user_liked = post.likes|selectattr('author_id', 'equalto', current_user.id)|list|length > 0 %}
+                                    {% if current_user %}
                                         <form method="POST" action="{{ url_for('like_post', post_id=post.id) }}" style="display: inline;">
-                                            <button type="submit" class="btn btn-sm {% if user_liked %}btn-danger{% else %}btn-outline-danger{% endif %}" title="მოწონება">
-                                                {% if user_liked %}❤️ {{ post.likes|length }}{% else %}🤍 {{ post.likes|length }}{% endif %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="მოწონება">
+                                                🤍 {{ post.likes|length }}
                                             </button>
                                         </form>
                                     {% else %}
@@ -61,11 +120,10 @@
                                     {% endif %}
 
                                     <!-- Repost Button -->
-                                    {% if current_user.is_authenticated %}
-                                        {% set user_reposted = post.reposts|selectattr('author_id', 'equalto', current_user.id)|list|length > 0 %}
+                                    {% if current_user %}
                                         <form method="POST" action="{{ url_for('repost_post', post_id=post.id) }}" style="display: inline;">
-                                            <button type="submit" class="btn btn-sm {% if user_reposted %}btn-info{% else %}btn-outline-info{% endif %}" title="რეპოსტი">
-                                                {% if user_reposted %}🔄 {{ post.reposts|length }}{% else %}↗️ {{ post.reposts|length }}{% endif %}
+                                            <button type="submit" class="btn btn-sm btn-outline-info" title="რეპოსტი">
+                                                ↗️ {{ post.reposts|length }}
                                             </button>
                                         </form>
                                     {% else %}
@@ -86,7 +144,7 @@
             <div class="alert alert-info text-center" role="alert">
                 <h5>📭 პოსტები ჯერ არ არსებობს</h5>
                 <p>იყავი პირველი, ვინც დაპოსტავს DevLog-ზე</p>
-                {% if current_user.is_authenticated %}
+                {% if current_user %}
                     <a href="{{ url_for('create_post') }}" class="btn btn-primary">პოსტის შექმნა</a>
                 {% else %}
                     <a href="{{ url_for('login') }}" class="btn btn-primary">შესვლა და დაწყება</a>

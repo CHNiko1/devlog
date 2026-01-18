@@ -1,20 +1,8 @@
 """
-Configuration settings for DevLog app
+Simple configuration for DevLog app
+This file is no longer used - config is now in app.py
+Kept here for reference only
 """
 
-import os
-
-# Get the folder where this file is located
-basedir = os.path.abspath(os.path.dirname(__file__))
-
-# Database path
-DATABASE_PATH = f'sqlite:///{basedir}/devlog.db'
-
-# Secret key for sessions (change this in production!)
-SECRET_KEY = 'your-secret-key-change-in-production'
-
-# These are the settings we give to Flask
-class Config:
-    SQLALCHEMY_DATABASE_URI = DATABASE_PATH
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SECRET_KEY = SECRET_KEY
+# Configuration is now handled directly in app.py
+# See app.py for DATABASE_URL, SECRET_KEY, and app.config settings

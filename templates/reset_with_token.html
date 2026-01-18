@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}პაროლის აღდგენა — DevLog{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-lg">
+                <div class="card-body p-5">
+                    <h2 class="card-title text-center mb-4">🔐 პაროლის აღდგენა</h2>
+                    
+                    <p class="text-muted text-center mb-4">
+                        გთხოვთ, შეიყვანეთ ახალი პაროლი
+                    </p>
+
+                    <form method="POST">
+                        <!-- New Password -->
+                        <div class="mb-3">
+                            <label for="newPasswordInput" class="form-label">ახალი პაროლი</label>
+                            <input 
+                                type="password" 
+                                class="form-control form-control-lg" 
+                                id="newPasswordInput" 
+                                name="new_password" 
+                                placeholder="შენი ახალი პაროლი"
+                                required>
+                        </div>
+
+                        <!-- Confirm Password -->
+                        <div class="mb-4">
+                            <label for="confirmPasswordInput" class="form-label">დაადასტურე პაროლი</label>
+                            <input 
+                                type="password" 
+                                class="form-control form-control-lg" 
+                                id="confirmPasswordInput" 
+                                name="confirm_password" 
+                                placeholder="დაადასტურე პაროლი"
+                                required>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn btn-primary btn-lg w-100">პაროლის აღდგენა</button>
+                    </form>
+
+                    <!-- Divider -->
+                    <hr class="my-4">
+
+                    <!-- Back to Login Link -->
+                    <p class="text-center mb-0">
+                        <a href="{{ url_for('login') }}" class="fw-bold">← დაბრუნება შესვლაში</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

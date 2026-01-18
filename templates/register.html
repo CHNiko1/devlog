@@ -41,7 +41,7 @@
                         </div>
 
                         <!-- Password -->
-                        <div class="mb-4">
+                        <div class="mb-3">
                             <label for="passwordInput" class="form-label">პაროლი</label>
                             <input 
                                 type="password" 
@@ -52,6 +52,31 @@
                                 required>
                             <small class="form-text text-muted">
                                 მინიმუმ 8 სიმბოლო
+                            </small>
+                        </div>
+
+                        <!-- Gender -->
+                        <div class="mb-3">
+                            <label for="genderSelect" class="form-label">👤 სქესი</label>
+                            <select class="form-select form-select-lg" id="genderSelect" name="gender" required>
+                                <option value="">აირჩიე სქესი...</option>
+                                <option value="male">👨 კაცი</option>
+                                <option value="female">👩 ქალი</option>
+                            </select>
+                        </div>
+
+                        <!-- Programming Level -->
+                        <div class="mb-4">
+                            <label for="levelSelect" class="form-label">📊 შენი პროგრამირების დონე</label>
+                            <select class="form-select form-select-lg" id="levelSelect" name="level" required>
+                                <option value="">აირჩიე დონე...</option>
+                                <option value="beginner">🟢 სტაჟიორი / Trainee (სრულიად დამწყები)</option>
+                                <option value="junior">🔵 ჯუნიორი / Junior (0-2 წლის გამოცდილი დეველოპერი)</option>
+                                <option value="intermediate">🟠 საშუალო / Mid-Level (საშუალო დონის პროგრამისტი)</option>
+                                <option value="advanced">🔴 სენიორი / Senior (5+ წელი გამოცდილებიანი დეველოპერი)</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                არ ინერვიულო, შენი დონე არ არის მნიშვნელოვანი, ყველამ თავისი გზიდან დაიწყო!
                             </small>
                         </div>
 

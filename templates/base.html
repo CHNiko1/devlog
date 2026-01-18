@@ -36,20 +36,40 @@
                     </li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
-                    {% if current_user.is_authenticated %}
+                    {% if current_user %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('create_post') }}">+ პოსტის შექმნა</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('user_profile', username=current_user.username) }}">👤 ჩემი პროფილი</a>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                🔔
+                                {% if unread_notifications_count > 0 %}
+                                    <span class="badge bg-danger ms-1">{{ unread_notifications_count }}</span>
+                                {% endif %}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{{ url_for('all_messages') }}">💬 Messages</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('notifications') }}">🔔 შეტყობინებები</a></li>
+                            </ul>
                         </li>
                         {% if current_user.role == 'admin' %}
                             <li class="nav-item">
                                 <a class="nav-link text-warning" href="{{ url_for('admin') }}">⚙️ Admin</a>
                             </li>
                         {% endif %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('logout') }}">გამოსვლა</a>
+                        <li class="nav-item dropdown ms-lg-2">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                {% if current_user.profile_photo %}
+                                    <img src="{{ current_user.profile_photo }}" class="nav-avatar" alt="{{ current_user.username }}">
+                                {% else %}
+                                    <span class="nav-avatar nav-avatar-initial">{{ current_user.username[0]|upper }}</span>
+                                {% endif %}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{{ url_for('user_profile', username=current_user.username) }}">პროფილის ნახვა</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('logout') }}">გამოსვლა</a></li>
+                            </ul>
                         </li>
                     {% else %}
                         <li class="nav-item">
@@ -87,7 +107,7 @@
     <footer class="bg-dark text-light text-center py-4 mt-5">
         <div class="container">
             <p class="mb-0">
-                <strong>DevLog</strong> — ქართველი დეველოპერების პლატფორმა 
+                <strong>DevLog</strong> — ქართველი დეველოპერების პლატფორმა / devlog@feedback.com 
                 <small class="text-muted">© 2026</small>
             </p>
         </div>

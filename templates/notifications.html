@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}DevLog — შეტყობინებები{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="section-title text-center mb-4">შეტყობინებები</h1>
+    {% if notifications %}
+        <div class="list-group shadow-sm">
+            {% for n in notifications %}
+                <div class="list-group-item d-flex justify-content-between align-items-start {% if not n.is_read %}bg-light{% endif %}">
+                    <div>
+                        <div class="fw-semibold">{{ n.message }}</div>
+                        {% if n.post %}
+                            <div class="mt-1">
+                                <a href="{{ url_for('post_detail', post_id=n.post.id) }}" class="text-decoration-none">პოსტის ნახვა</a>
+                            </div>
+                        {% endif %}
+                        {% if n.action == 'follow' and n.sender %}
+                            <div class="mt-2">
+                                <form method="POST" action="{{ url_for('follow_back', username=n.sender.username) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-primary">⤴️ Follow Back</button>
+                                </form>
+                                <a href="{{ url_for('user_profile', username=n.sender.username) }}" class="btn btn-sm btn-outline-secondary">პროფილი</a>
+                            </div>
+                        {% endif %}
+                        <small class="text-muted">{{ n.created_at.strftime('%d.%m.%Y %H:%M') if n.created_at else '' }}</small>
+                    </div>
+                    {% if n.sender %}
+                        <span class="badge bg-secondary align-self-center">{{ n.sender.username }}</span>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info text-center" role="alert">
+            📭 ჯერ არ გაქვთ შეტყობინებები.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}{{ user.username }}-ის followers — DevLog{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="section-title">👥 {{ user.username }}-ის Followers</h1>
+            <p class="text-muted">სულ: {{ followers|length }}</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('user_profile', username=user.username) }}" class="btn btn-outline-secondary">← უკან</a>
+        </div>
+    </div>
+
+    {% if followers %}
+        <div class="list-group shadow-sm">
+            {% for follower in followers %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3">
+                        <img src="{{ follower.profile_photo }}" alt="{{ follower.username }}" class="rounded-circle" width="50" height="50" style="object-fit: cover;">
+                        <div>
+                            <h6 class="mb-0"><a href="{{ url_for('user_profile', username=follower.username) }}" class="text-decoration-none">{{ follower.username }}</a></h6>
+                            <small class="text-muted">
+                                {% if follower.level == 'beginner' %}🟢 სტაჟიორი
+                                {% elif follower.level == 'junior' %}🔵 ჯუნიორი
+                                {% elif follower.level == 'intermediate' %}🟠 საშუალო
+                                {% else %}🔴 სენიორი
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                    {% if current_user and current_user.id != follower.id %}
+                        {% if follower in current_user.following %}
+                            <form method="POST" action="{{ url_for('unfollow_user', username=follower.username) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-sm btn-danger">✓ Unfollow</button>
+                            </form>
+                        {% else %}
+                            <form method="POST" action="{{ url_for('follow_user', username=follower.username) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-sm btn-primary">+ Follow</button>
+                            </form>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info text-center">
+            👻 ჯერ არ გაქვთ Followers.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

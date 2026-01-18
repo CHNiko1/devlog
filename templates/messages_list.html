@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}DevLog — გახსნილი შეტყობინებები{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="section-title text-center mb-4">💬 გახსნილი შეტყობინებები</h1>
+    
+    {% if conversations %}
+        <div class="card shadow-sm">
+            <div class="list-group list-group-flush">
+                {% for convo in conversations %}
+                    <a href="{{ url_for('message_thread', username=convo.user.username) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if convo.unread_count > 0 %}bg-light fw-bold{% endif %}">
+                        <div class="d-flex align-items-center gap-3 flex-grow-1">
+                            <img src="{{ convo.user.profile_photo }}" alt="{{ convo.user.username }}" class="rounded-circle" width="50" height="50" style="object-fit: cover;">
+                            <div>
+                                <h6 class="mb-1">{{ convo.user.username }}</h6>
+                                <small class="text-muted d-block">
+                                    {% if convo.last_message %}
+                                        {{ convo.last_message.content[:50] }}{% if convo.last_message.content|length > 50 %}...{% endif %}
+                                    {% else %}
+                                        ჩატი დაწყებული
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            {% if convo.unread_count > 0 %}
+                                <span class="badge bg-primary rounded-pill">{{ convo.unread_count }}</span>
+                            {% endif %}
+                            <small class="text-muted d-block mt-1">
+                                {% if convo.last_message %}
+                                    {{ convo.last_message.created_at.strftime('%d.%m.%Y %H:%M') if convo.last_message.created_at else '' }}
+                                {% endif %}
+                            </small>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-info text-center">
+            👻 თქვენ ჯერ არ გაქვთ გახსნილი შეტყობინებები.
+            <p class="mt-2 mb-0"><small>დაწყეთ ჩატი ურთიერთ Follow-ზე მყოფი მომხმარებლებთან.</small></p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

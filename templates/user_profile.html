@@ -13,19 +13,12 @@
                     <img src="{{ user.profile_photo }}" alt="{{ user.username }}" class="rounded-circle" width="150" height="150" style="object-fit: cover; border: 3px solid #667eea;">
                     
                     <!-- Photo Upload for Own Profile -->
-                    {% if current_user.is_authenticated and current_user.id == user.id %}
+                    {% if current_user and current_user.id == user.id %}
                         <form method="POST" action="{{ url_for('upload_photo') }}" enctype="multipart/form-data" class="mt-3">
-                            <input type="file" name="photo" class="form-control form-control-sm" accept="image/*" id="photoInput" style="display: none;">
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="document.getElementById('photoInput').click()">
+                            <input type="file" name="photo" class="form-control form-control-sm" accept="image/*" id="photoInput" onchange="this.form.submit()">
+                            <label for="photoInput" class="btn btn-sm btn-outline-primary mt-2">
                                 📷 ფოტო შეცვლა
-                            </button>
-                            <script>
-                                document.getElementById('photoInput').addEventListener('change', function(e) {
-                                    if (this.files.length > 0) {
-                                        this.form.submit();
-                                    }
-                                });
-                            </script>
+                            </label>
                         </form>
                     {% endif %}
                 </div>
@@ -35,11 +28,43 @@
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div>
                             <h1 class="mb-2">{{ user.username }}</h1>
+                            <div class="mb-2">
+                                <span class="badge badge-level">
+                                    {% if user.level == 'beginner' %}🟢 სტაჟიორი / Trainee
+                                    {% elif user.level == 'junior' %}🔵 ჯუნიორი / Junior
+                                    {% elif user.level == 'intermediate' %}🟠 საშუალო / Mid-Level
+                                    {% else %}🔴 სენიორი / Senior
+                                    {% endif %}
+                                </span>
+                            </div>
+                            
+                            <!-- Edit Level Button (Only for own profile) -->
+                            {% if current_user and current_user.id == user.id %}
+                                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#editLevelForm" aria-expanded="false" aria-controls="editLevelForm">
+                                    ✏️ დონის შეცვლა
+                                </button>
+                                
+                                <div class="collapse mt-2" id="editLevelForm">
+                                    <form method="POST" action="{{ url_for('update_level') }}" class="card card-body">
+                                        <div class="mb-2">
+                                            <label for="levelSelect" class="form-label">პროგრამირების დონე</label>
+                                            <select class="form-select form-select-sm" id="levelSelect" name="level" required>
+                                                <option value="beginner" {% if user.level == 'beginner' %}selected{% endif %}>🟢 სტაჟიორი / Trainee</option>
+                                                <option value="junior" {% if user.level == 'junior' %}selected{% endif %}>🔵 ჯუნიორი / Junior</option>
+                                                <option value="intermediate" {% if user.level == 'intermediate' %}selected{% endif %}>🟠 საშუალო / Mid-Level</option>
+                                                <option value="senior" {% if user.level == 'senior' %}selected{% endif %}>🔴 სენიორი / Senior</option>
+                                            </select>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary btn-sm">შენახვა</button>
+                                    </form>
+                                </div>
+                            {% endif %}
+                            
                             <p class="text-muted mb-3">📧 {{ user.email }}</p>
                         </div>
                         
                         <!-- Follow/Unfollow Button -->
-                        {% if current_user.is_authenticated and current_user.id != user.id %}
+                        {% if current_user and current_user.id != user.id %}
                             {% if is_following %}
                                 <form method="POST" action="{{ url_for('unfollow_user', username=user.username) }}" style="display: inline;">
                                     <button type="submit" class="btn btn-danger btn-sm">✓ Unfollow</button>
@@ -49,12 +74,15 @@
                                     <button type="submit" class="btn btn-primary btn-sm">+ Follow</button>
                                 </form>
                             {% endif %}
+                            {% if is_mutual_follow %}
+                                <a href="{{ url_for('message_thread', username=user.username) }}" class="btn btn-outline-secondary btn-sm ms-2">✉️ შეტყობინება</a>
+                            {% endif %}
                         {% endif %}
                     </div>
                     
                     <!-- Bio -->
                     <div class="bio-section mb-3">
-                        {% if current_user.is_authenticated and current_user.id == user.id %}
+                        {% if current_user and current_user.id == user.id %}
                             <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#editBioForm" aria-expanded="false" aria-controls="editBioForm">
                                 ✏️ ბიოგრაფიის რედაქტირება
                             </button>
@@ -91,14 +119,18 @@
                         </div>
                         <div class="col-auto">
                             <div class="text-center">
-                                <h5 class="mb-0">{{ user.followers|length }}</h5>
-                                <small class="text-muted">Followers</small>
+                                <a href="{{ url_for('view_followers', username=user.username) }}" class="text-decoration-none">
+                                    <h5 class="mb-0">{{ user.followers|length }}</h5>
+                                    <small class="text-muted">Followers</small>
+                                </a>
                             </div>
                         </div>
                         <div class="col-auto">
                             <div class="text-center">
-                                <h5 class="mb-0">{{ user.following|length }}</h5>
-                                <small class="text-muted">Following</small>
+                                <a href="{{ url_for('view_following', username=user.username) }}" class="text-decoration-none">
+                                    <h5 class="mb-0">{{ user.following|length }}</h5>
+                                    <small class="text-muted">Following</small>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -131,6 +163,9 @@
                     {% for post in posts %}
                         <div class="col-12">
                             <div class="card post-card">
+                                {% if post.photo %}
+                                <img src="{{ url_for('static', filename='uploads/posts/' + post.photo) }}" class="card-img-top" alt="{{ post.title }}" style="max-height: 200px; object-fit: cover;">
+                                {% endif %}
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                         <h5 class="card-title mb-0">
@@ -156,7 +191,7 @@
                                     <div class="d-flex justify-content-between align-items-center small text-muted">
                                         <span>📅 {{ post.created_at.strftime('%d.%m.%Y') }}</span>
                                         <a href="{{ url_for('post_detail', post_id=post.id) }}" class="btn btn-sm btn-outline-primary">წაკითხვა</a>
-                                        {% if current_user.is_authenticated and (current_user.id == post.author_id or current_user.role == 'admin') %}
+                                        {% if current_user and (current_user.id == post.author_id or current_user.role == 'admin') %}
                                         <form method="POST" action="{{ url_for('delete_post', post_id=post.id) }}" style="display:inline;" onsubmit="return confirm('დარწმუნებული ხარ რომ გინდა პოსტის წაშლა?');">
                                             <button type="submit" class="btn btn-sm btn-danger ms-2">🗑️ წაშლა</button>
                                         </form>
@@ -184,6 +219,9 @@
                                 <div class="card-header bg-light">
                                     <small class="text-muted">🔄 {{ user.username }}-ის მიერ რეპოსტი</small>
                                 </div>
+                                {% if post.photo %}
+                                <img src="{{ url_for('static', filename='uploads/posts/' + post.photo) }}" class="card-img-top" alt="{{ post.title }}" style="max-height: 200px; object-fit: cover;">
+                                {% endif %}
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                         <h5 class="card-title mb-0">

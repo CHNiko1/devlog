@@ -34,13 +34,20 @@
                     </div>
                 </header>
 
+                <!-- Post Image -->
+                {% if post.photo %}
+                <div class="post-image mb-4">
+                    <img src="{{ url_for('static', filename='uploads/posts/' + post.photo) }}" alt="{{ post.title }}" class="img-fluid rounded" style="max-width: 100%; height: auto;">
+                </div>
+                {% endif %}
+
                 <!-- Post Content -->
                 <section class="post-content">
                     {{ post.content }}
                 </section>
 
                 <!-- Delete Post Button (Author or Admin) -->
-                {% if current_user.is_authenticated and (current_user.id == post.author_id or current_user.role == 'admin') %}
+                {% if current_user and (current_user.id == post.author_id or current_user.role == 'admin') %}
                 <form method="POST" action="{{ url_for('delete_post', post_id=post.id) }}" onsubmit="return confirm('დარწმუნებული ხარ რომ გინდა პოსტის წაშლა?');" class="mt-4">
                     <button type="submit" class="btn btn-danger">🗑️ პოსტის წაშლა</button>
                 </form>
@@ -50,11 +57,10 @@
                 <div class="post-actions mt-4 mb-4">
                     <div class="d-flex gap-2 flex-wrap">
                         <!-- Like Button -->
-                        {% if current_user.is_authenticated %}
-                            {% set user_liked = post.likes|selectattr('author_id', 'equalto', current_user.id)|list|length > 0 %}
+                        {% if current_user %}
                             <form method="POST" action="{{ url_for('like_post', post_id=post.id) }}" style="display: inline;">
-                                <button type="submit" class="btn {% if user_liked %}btn-danger{% else %}btn-outline-danger{% endif %} btn-sm">
-                                    {% if user_liked %}❤️ მოწონებული{% else %}🤍 მოწონება{% endif %}
+                                <button type="submit" class="btn btn-outline-danger btn-sm">
+                                    🤍 მოწონება
                                 </button>
                             </form>
                         {% else %}
@@ -63,11 +69,10 @@
                         <span class="badge bg-light text-dark align-self-center">{{ post.likes|length }}</span>
 
                         <!-- Repost Button -->
-                        {% if current_user.is_authenticated %}
-                            {% set user_reposted = post.reposts|selectattr('author_id', 'equalto', current_user.id)|list|length > 0 %}
+                        {% if current_user %}
                             <form method="POST" action="{{ url_for('repost_post', post_id=post.id) }}" style="display: inline;">
-                                <button type="submit" class="btn {% if user_reposted %}btn-info{% else %}btn-outline-info{% endif %} btn-sm">
-                                    {% if user_reposted %}🔄 დარეპოსტებულია{% else %}🔄 რეპოსტი{% endif %}
+                                <button type="submit" class="btn btn-outline-info btn-sm">
+                                    🔄 რეპოსტი
                                 </button>
                             </form>
                         {% else %}
@@ -111,7 +116,7 @@
                 {% endif %}
 
                 <!-- Add Comment Form -->
-                {% if current_user.is_authenticated %}
+                {% if current_user %}
                     <div class="add-comment-section mt-4 pt-4 border-top">
                         <h5 class="mb-3">კომენტარის დამატება</h5>
                         <form method="POST" action="{{ url_for('add_comment', post_id=post.id) }}">

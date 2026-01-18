@@ -26,13 +26,13 @@
                 <label for="languageFilter" class="form-label">💻 ენა</label>
                 <select class="form-select" id="languageFilter" name="language">
                     <option value="">ყველა</option>
-                    <option value="Python" {% if request.args.get('language') == 'Python' %}selected{% endif %}>Python</option>
-                    <option value="JavaScript" {% if request.args.get('language') == 'JavaScript' %}selected{% endif %}>JavaScript</option>
-                    <option value="HTML" {% if request.args.get('language') == 'HTML' %}selected{% endif %}>HTML</option>
-                    <option value="CSS" {% if request.args.get('language') == 'CSS' %}selected{% endif %}>CSS</option>
-                    <option value="Bash" {% if request.args.get('language') == 'Bash' %}selected{% endif %}>Bash</option>
-                    <option value="C++" {% if request.args.get('language') == 'C++' %}selected{% endif %}>C++</option>
-                    <option value="Java" {% if request.args.get('language') == 'Java' %}selected{% endif %}>Java</option>
+                    <option value="Python" {% if request.args.get('language') == 'Python' %}selected{% endif %}>🐍 Python</option>
+                    <option value="JavaScript" {% if request.args.get('language') == 'JavaScript' %}selected{% endif %}>🟨 JavaScript</option>
+                    <option value="HTML" {% if request.args.get('language') == 'HTML' %}selected{% endif %}>🟠 HTML</option>
+                    <option value="CSS" {% if request.args.get('language') == 'CSS' %}selected{% endif %}>🔵 CSS</option>
+                    <option value="Bash" {% if request.args.get('language') == 'Bash' %}selected{% endif %}>🖥️ Bash</option>
+                    <option value="C++" {% if request.args.get('language') == 'C++' %}selected{% endif %}>⚙️ C++</option>
+                    <option value="Java" {% if request.args.get('language') == 'Java' %}selected{% endif %}>☕ Java</option>
                 </select>
             </div>
 
@@ -86,6 +86,9 @@
             {% for post in posts %}
                 <div class="col-md-6 col-lg-12">
                     <div class="card post-card h-100">
+                        {% if post.photo %}
+                        <img src="{{ url_for('static', filename='uploads/posts/' + post.photo) }}" class="card-img-top" alt="{{ post.title }}" style="max-height: 200px; object-fit: cover;">
+                        {% endif %}
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h5 class="card-title mb-0">
@@ -115,11 +118,10 @@
                                 </small>
                                 <div class="d-flex gap-2 align-items-center">
                                     <!-- Like Button -->
-                                    {% if current_user.is_authenticated %}
-                                        {% set user_liked = post.likes|selectattr('author_id', 'equalto', current_user.id)|list|length > 0 %}
+                                    {% if current_user %}
                                         <form method="POST" action="{{ url_for('like_post', post_id=post.id) }}" style="display: inline;">
-                                            <button type="submit" class="btn btn-sm {% if user_liked %}btn-danger{% else %}btn-outline-danger{% endif %}" title="Like">
-                                                {% if user_liked %}❤️{% else %}🤍{% endif %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Like">
+                                                🤍
                                             </button>
                                         </form>
                                     {% else %}
@@ -128,11 +130,10 @@
                                     <small>{{ post.likes|length }}</small>
 
                                     <!-- Repost Button -->
-                                    {% if current_user.is_authenticated %}
-                                        {% set user_reposted = post.reposts|selectattr('author_id', 'equalto', current_user.id)|list|length > 0 %}
+                                    {% if current_user %}
                                         <form method="POST" action="{{ url_for('repost_post', post_id=post.id) }}" style="display: inline;">
-                                            <button type="submit" class="btn btn-sm {% if user_reposted %}btn-info{% else %}btn-outline-info{% endif %}" title="Repost">
-                                                {% if user_reposted %}🔄{% else %}↗️{% endif %}
+                                            <button type="submit" class="btn btn-sm btn-outline-info" title="Repost">
+                                                ↗️
                                             </button>
                                         </form>
                                     {% else %}

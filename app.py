@@ -1,60 +1,100 @@
 """
-DevLog Flask Backend
-Georgian Junior Developer Community Platform
-
-This is the main file that starts the app.
-All the actual code is in separate files:
-- config.py = settings
-- models.py = database models
-- auth.py = login/permissions
-- database.py = database setup
-- routes.py = all the pages
-- errors.py = error pages
+DevLog Flask App
+A social platform for Georgian developers
 """
 
-from flask import Flask
-from models import db
-from config import Config
-from database import init_db
-from routes import setup_routes
-from errors import setup_error_handlers
-from auth import get_current_user
+from flask import Flask, session, redirect, url_for, flash, render_template
+from models import db, User, Notification
+import os
 
+# Settings
+basedir = os.path.abspath(os.path.dirname(__file__))
+DATABASE_URL = f'sqlite:///{basedir}/devlog.db'
+SECRET_KEY = 'my-secret-key'
 
-# Create the Flask app
+# Create Flask app
 app = Flask(__name__)
-
-# Load configuration
-app.config.from_object(Config)
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = SECRET_KEY
 
 # Initialize database
 db.init_app(app)
 
-# Set up all routes
+
+# Function to get logged in user
+def get_current_user():
+    if 'user_id' in session:
+        user = User.query.get(session['user_id'])
+        return user
+    return None
+
+
+# Function to check unread notifications
+def get_unread_count():
+    user = get_current_user()
+    if user:
+        # Get all unread notifications
+        notifications = Notification.query.filter_by(user_id=user.id, is_read=False).all()
+        count = len(notifications)
+        return count
+    return 0
+
+
+# Make user available in templates
+@app.context_processor
+def inject_globals():
+    user = get_current_user()
+    if user:
+        user.is_authenticated = True
+    return {
+        'current_user': user,
+        'unread_notifications_count': get_unread_count()
+    }
+
+
+# Import all routes
+from routes import setup_routes
 setup_routes(app)
 
-# Set up error handlers
-setup_error_handlers(app)
 
-# Make current user available in templates
-@app.context_processor
-def inject_user():
-    return {'current_user': get_current_user()}
+# Initialize database on startup
+def init_database(app):
+    with app.app_context():
+        db.create_all()
+        
+        # Check if users already exist
+        if User.query.first() is not None:
+            return
+        
+        # Create demo user
+        demo = User(
+            username='demo',
+            email='demo@devlog.ge',
+            password='password123',
+            role='user',
+            level='beginner'
+        )
+        
+        # Create admin user
+        admin = User(
+            username='admin',
+            email='admin@devlog.ge',
+            password='admin123',
+            role='admin',
+            level='senior'
+        )
+        
+        db.session.add(demo)
+        db.session.add(admin)
+        db.session.commit()
 
 
 # Run the app
 if __name__ == '__main__':
-    # Initialize database and add sample data
-    init_db(app)
-    
-    print("\n" + "="*50)
-    print("🚀 DevLog Flask Backend Started")
-    print("="*50)
-    print("\n✅ Demo Users:")
-    print("  Username: demo  | Password: password123")
-    print("  Username: admin | Password: admin123")
-    print("\n🌍 http://localhost:5000/")
-    print("\n💾 Database: devlog.db")
-    print("="*50 + "\n")
-    
+    init_database(app)
+    print("\nDevLog started")
+    print("Demo user: demo / password123")
+    print("Admin user: admin / admin123")
+    print("\nhttp://localhost:5000/\n")
     app.run(debug=True)

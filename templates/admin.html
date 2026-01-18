@@ -15,6 +15,9 @@
             {% for post in pending_posts %}
                 <div class="col-md-6">
                     <div class="card h-100">
+                        {% if post.photo %}
+                        <img src="{{ url_for('static', filename='uploads/posts/' + post.photo) }}" class="card-img-top" alt="{{ post.title }}" style="max-height: 200px; object-fit: cover;">
+                        {% endif %}
                         <div class="card-body">
                             <h5 class="card-title">{{ post.title }}</h5>
                             <div class="mb-3">
