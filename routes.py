@@ -3,12 +3,16 @@ All routes for DevLog app
 """
 
 import os
+import logging
 from datetime import datetime
 from flask import render_template, request, redirect, url_for, flash, session
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from models import db, User, Post, Comment, Like, Repost, Notification, Message
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 
 # Allowed file extensions
@@ -271,17 +275,24 @@ def setup_routes(app):
             username = request.form.get('username', '').strip()
             password = request.form.get('password', '')
             
+            logger.info(f"Login attempt for username: {username}")
+            
             if not username or not password:
                 flash('Username and password required', 'danger')
                 return redirect(url_for('login'))
             
             user = User.query.filter_by(username=username).first()
             
-            if user and check_password_hash(user.password, password):
+            if not user:
+                logger.warning(f"User not found: {username}")
+                flash('Wrong username or password', 'danger')
+            elif check_password_hash(user.password, password):
                 session['user_id'] = user.id
+                logger.info(f"✓ Login successful for: {username}")
                 flash('Login successful!', 'success')
                 return redirect(url_for('index'))
             else:
+                logger.warning(f"Invalid password for user: {username}")
                 flash('Wrong username or password', 'danger')
         
         return render_template('login.html')

@@ -15,8 +15,18 @@ logger = logging.getLogger(__name__)
 
 # Settings
 basedir = os.path.abspath(os.path.dirname(__file__))
-DATABASE_URL = f'sqlite:///{basedir}/devlog.db'
-SECRET_KEY = 'my-secret-key'
+
+# Use PostgreSQL on Render, SQLite locally
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    # Fix for Render's postgres:// URL (should be postgresql://)
+    if DATABASE_URL.startswith('postgres://'):
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+else:
+    # Local development - use SQLite
+    DATABASE_URL = f'sqlite:///{basedir}/devlog.db'
+
+SECRET_KEY = os.environ.get('SECRET_KEY', 'my-secret-key')
 
 # Create Flask app
 app = Flask(__name__)
@@ -86,25 +96,30 @@ def server_error(error):
 def init_database(app):
     with app.app_context():
         db.create_all()
+        logger.info("Database tables created")
 
         # Check if users already exist
-        if User.query.first() is not None:
+        existing_user = User.query.first()
+        if existing_user is not None:
+            logger.info(f"Users already exist in database (found: {existing_user.username})")
             return
 
         # Create demo user
+        demo_password = generate_password_hash('password123')
         demo = User(
             username='demo',
             email='demo@devlog.ge',
-            password=generate_password_hash('password123'),
+            password=demo_password,
             role='user',
             level='beginner'
         )
 
         # Create admin user
+        admin_password = generate_password_hash('admin123')
         admin = User(
             username='admin',
             email='admin@devlog.ge',
-            password=generate_password_hash('admin123'),
+            password=admin_password,
             role='admin',
             level='senior'
         )
@@ -112,6 +127,9 @@ def init_database(app):
         db.session.add(demo)
         db.session.add(admin)
         db.session.commit()
+        logger.info("✓ Demo and Admin users created successfully")
+        logger.info("  Demo: demo / password123")
+        logger.info("  Admin: admin / admin123")
 
 
 # Ensure database exists when the app loads (covers gunicorn)
